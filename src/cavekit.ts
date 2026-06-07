@@ -1,10 +1,12 @@
-import type { PluginInput } from "@opencode-ai/plugin"
-import { copyFileSync } from "node:fs"
+import type { Hooks, PluginInput } from "@opencode-ai/plugin"
+import type { TextPart } from "@opencode-ai/sdk"
+import { existsSync, copyFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const here = dirname(fileURLToPath(import.meta.url))
-const FORMAT_SRC = join(here, "../assets/FORMAT.md")
+const _npmFormatPath = join(here, "../assets/FORMAT.md")
+const FORMAT_SRC = existsSync(_npmFormatPath) ? _npmFormatPath : join(here, "../FORMAT.md")
 
 function copyFormat(directory: string): string {
   const dest = join(directory, "FORMAT.md")
@@ -16,36 +18,27 @@ function copyFormat(directory: string): string {
   }
 }
 
-export const cavekit = async (input: PluginInput) => {
+export const cavekit = async (input: PluginInput): Promise<Partial<Hooks>> => {
+  const { directory, client } = input
   return {
     // ── Command intercept: /ck:init copies FORMAT.md to project root ──────────
+    // V90: inject result via client.session.prompt(noReply:true); ⊥ set output.parts
     "command.execute.before": async (
-      { command }: { command: string },
-      output: { parts?: Array<{ type: string; text: string }> }
+      { command, sessionID }: { command: string; sessionID: string; arguments: string }
     ) => {
-      if (command !== "ck:init" && command !== "ck-init") return
-      output.parts = [{ type: "text", text: copyFormat(input.directory) }]
-    },
-
-    // ── Agent-callable tool: ck_init ─────────────────────────────────────────
-    tool: {
-      ck_init: {
-        description:
-          "Copy FORMAT.md (the SPEC.md schema) to the current project root. " +
-          "Run once per project before using /ck:spec. " +
-          "Idempotent — safe to re-run.",
-        parameters: {
-          type: "object" as const,
-          properties: {},
-          required: [],
-        },
-        execute: async (
-          _args: Record<string, unknown>,
-          ctx: { directory: string }
-        ) => {
-          return copyFormat(ctx.directory)
-        },
-      },
+      if (command !== "ck:init") return
+      const part: TextPart = {
+        id: crypto.randomUUID(),
+        sessionID,
+        messageID: crypto.randomUUID(),
+        type: "text",
+        synthetic: true,
+        text: copyFormat(directory),
+      }
+      await client.session.prompt({
+        path: { id: sessionID },
+        body: { noReply: true, parts: [part] },
+      })
     },
   }
 }

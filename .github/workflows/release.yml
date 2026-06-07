@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: "Commit SHA to tag"
+        required: true
+        type: string
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Compute new version
+        id: version
+        run: |
+          RAW=$(npm version ${{ inputs.bump }} --no-git-tag-version)
+          NEW_VERSION=${RAW#v}
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Reset version change
+        run: git checkout .
+
+      - name: Tag commit
+        run: git tag "v${{ steps.version.outputs.new_version }}" "${{ inputs.commit }}"
+
+      - name: Push tag
+        run: git push origin "v${{ steps.version.outputs.new_version }}"

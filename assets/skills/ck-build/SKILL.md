@@ -1,67 +1,82 @@
 ---
 name: ck-build
-description: Plan and execute tasks from SPEC.md using cavekit v4 build skill. Use when asked to build, implement, or execute spec tasks.
+description: |
+  Plan-then-execute implementation against SPEC.md. Native single-thread
+  loop, no sub-agents. On test or build failure, auto-invokes the backprop
+  skill before retrying — a failed verification always considers whether
+  a new §V invariant would prevent recurrence. Triggers when the user asks
+  to build, implement, execute the spec, or tackle a specific §T task
+  (`build §T.3`, `build --next`, `implement next task`, `run the build`).
+  Expects SPEC.md to exist; if not, defers to the spec skill.
 ---
 
-# ck-build — Plan → Execute Skill
+# build — implement spec
 
-Implements tasks from `SPEC.md §T`. Reads the spec, plans the implementation, executes, and backprops failures.
+Single-thread native plan→execute. You are main agent. No swarm.
 
----
+## LOAD
 
-## Preconditions
+1. Read `SPEC.md`. If missing → tell user to invoke the spec skill first. Stop.
+2. Read `FORMAT.md` once if not loaded.
+3. Parse invocation args:
+   - `§T.n` → that task only
+   - `--next` → lowest-numbered row with status `.` or `~`
+   - `--all` or empty → every `.` row in §T order
 
-Before running, verify:
-1. `SPEC.md` exists at project root. If not, tell user to run `/ck:spec` first.
-2. `FORMAT.md` exists at project root. If not, run `ck_init` tool.
-3. The target §T task exists and is in `.` (pending) status.
+## PLAN
 
----
+Native plan mode. For chosen task(s):
 
-## Invocation
+1. Cite every §V invariant that applies. Plan must respect all.
+2. Cite every §I interface touched. Plan must preserve shape.
+3. List files to create / edit.
+4. List tests to add or update (one per invariant touched).
+5. Name verification command (test, build, lint).
 
-```
-/ck:build §T.n      — build a specific task by ID
-/ck:build --next    — build the next pending task (first . status in §T)
-/ck:build --all     — build all pending tasks in order
-```
+Show plan. Wait for user OK unless auto mode.
 
----
+## EXECUTE
 
-## Protocol
+Per task in order:
 
-### 1. Read SPEC.md
-Load all sections. Identify the target task(s) from §T.
+1. Flip §T.n status cell `.` → `~`. Just write to SPEC.md.
+2. Edit code per plan.
+3. Run verification command.
+4. **Pass** → flip `~` → `x`. Next task.
+5. **Fail** → invoke backprop skill. Do NOT retry blindly.
 
-### 2. Identify cites
-Each §T task lists `cites` referencing §V invariants and §I interfaces this task must satisfy. Collect those and treat them as acceptance criteria.
+## FAIL → BACKPROP
 
-### 3. Plan
-Write a concise implementation plan. Include:
-- Files to create/modify
-- Key decisions or trade-offs
-- How each cited §V invariant will be satisfied
+On test/build failure:
 
-Present the plan to the user. If `--all` or the task is non-trivial, wait for confirmation before executing. If the task is simple and isolated, proceed directly.
+1. Read failure output.
+2. Ask: is failure (a) my code bug, (b) spec wrong, or (c) unspecified edge case?
+3. If (a) → fix code, re-run. No spec change.
+4. If (b) or (c) → invoke spec skill with `bug: <cause>` first, let it update §V and §B, then resume build against updated spec.
 
-### 4. Execute
-Implement the plan. After implementation:
-- Run relevant tests or checks
-- Verify each cited §V invariant holds
+Rule: never silently fix root-cause without considering backprop. §B is the memory that stops recurrence.
 
-### 5. Update §T
-Mark the completed task as `x`. If partially done, mark `~`.
+## WRITE POLICY
 
-### 6. Backprop on failure
-If execution fails or a §V invariant is violated:
-1. Run `/ck:spec bug: <description>` protocol automatically (add §B entry, add/update §V)
-2. Fix and re-attempt
-3. If the fix requires spec changes, amend first via ck-spec skill
+- Only flip §T status. No other SPEC.md edits from build.
+- Other spec edits → invoke spec skill.
+- Commit after each §T completes. Message: `T<n>: <goal line>` + §V cites.
 
----
+## VERIFICATION
 
-## Constraints
+Task `x` only if ALL hold:
+- Verification command exits 0.
+- New test(s) added per plan.
+- No §V invariant regressed (run full test suite at end).
+- **Accept column satisfied**: read `accept` cell for this §T row.
+  - If `accept` = `.` or empty → warn user: "no accept criteria defined — mark done anyway? [y/N]"
+  - If `accept` has criteria → confirm evidence exists (test output, curl response, log line, etc.)
+  - Never self-approve. Show evidence, let user confirm OR run `/ck:eval` for fresh-context grade.
 
-- Never implement beyond what the spec task requires
-- If a task's `cites` reference §V items, those invariants are the contract — treat them as hard constraints, not suggestions
-- Do not modify §T task descriptions — only update status column
+Victory declaration bias: agent marking own work done = known failure mode. Default: FAIL until evidence flips it.
+
+## NON-GOALS
+
+- No sub-agents. No parallel workers. Main thread only.
+- No progress dashboards. `cat SPEC.md | grep §T` is the dashboard.
+- No speculative work beyond chosen task scope.

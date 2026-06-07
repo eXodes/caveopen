@@ -1,70 +1,118 @@
 ---
 name: ck-caveman
-description: Cavekit-scoped caveman encoding utility. Use when writing or reviewing spec content that should be maximally compressed using caveman symbols.
+description: |
+  Caveman encoding for SPEC.md and spec-adjacent writes. Loaded by /ck:spec, /ck:build,
+  /ck:check. Cuts tokens ~75% vs prose while staying precise. Triggers on any write
+  to SPEC.md or when user says "caveman", "compress this", "be brief".
 ---
 
-# ck-caveman — Spec Encoding Utility
+# caveman — spec encoding
 
-Applies caveman compression to spec content. Cavekit-scoped — intended for use within spec writing, not general conversation compression (use the `caveman` skill for that).
+Applies to SPEC.md writes, spec-referencing prose, backprop entries.
+Does NOT apply to code, error strings, commit messages, PR descriptions.
 
----
+## GRAMMAR
 
-## Purpose
+- Drop articles (a, an, the).
+- Drop filler (just, really, basically, simply, actually).
+- Drop aux verbs where fragment works (is, are, was, were, being).
+- Drop pleasantries.
+- No hedging (skip "might", "perhaps", "could be worth").
+- Fragments fine.
+- Short synonyms: fix > implement, big > extensive, run > execute.
 
-SPEC.md bodies should be compressed using caveman symbols for density. This skill helps encode or review spec content.
+## SYMBOLS
 
----
+Prefer over words:
 
-## Encoding Rules for Spec Bodies
+```
+→   leads to / becomes / on <x>
+∴   therefore / fix
+∀   for all / every
+∃   exists / some
+!   must / required
+?   may / optional / unknown
+⊥   never / forbidden / nil
+≠   not equal
+∈   in
+∉   not in
+≤   at most
+≥   at least
+&   and
+|   or
+§   section reference
+```
 
-Apply these substitutions in spec content:
+## PRESERVE VERBATIM
 
-| Replace | With |
-|---|---|
-| "leads to" / "results in" / "implies" | `→` |
-| "caused by" / "comes from" | `←` |
-| "therefore" | `∴` |
-| "because" / "since" | `∵` |
-| "for all" / "every" / "each" | `∀` |
-| "there exists" / "some" / "at least one" | `∃` |
-| "undefined" / "invalid" / "false" | `⊥` |
-| "holds" / "true" / "valid" | `⊤` |
-| "must not" / "never" | `! ¬` |
-| "if and only if" | `↔` |
-| "approximately" | `≈` |
-| "not equal" | `≠` |
-| articles (a/an/the) | _(drop)_ |
-| "in order to" | _(drop)_ |
-| "is a" / "is an" | `:` |
+Never compress:
 
----
+- Code blocks, snippets, one-liners with backticks.
+- Paths: `src/auth/mw.go`.
+- URLs.
+- Identifiers: function names, variable names, env vars.
+- Numbers and versions.
+- Error message strings.
+- SQL, regex, JSON, YAML.
+- Quoted strings.
 
-## Usage Modes
+## SHAPES
 
-### Encode text
-Take prose spec content and return compressed version using caveman symbols. Preserve all semantic content.
+**Invariant**:
+```
+V<n>: <subject> <relation> <condition>
+V1: ∀ req → auth check before handler
+V2: token expiry ≤ current_time → reject
+```
 
-### Review spec
-Read SPEC.md sections and flag items that could be further compressed without losing meaning.
+**Bug row** (pipe table under §B):
+```
+id|date|cause|fix
+B1|2026-04-20|token `<` not `≤`|V2
+```
 
-### Validate symbols
-Check that symbols used in SPEC.md are from the approved set and are used consistently.
+**Task row** (pipe table under §T):
+```
+id|status|task|cites
+T3|x|add auth mw|V1,I.api
+```
+Status: `x` done, `~` wip, `.` todo. Escape literal `|` as `\|`.
 
----
+**Interface**:
+```
+<kind>: <name> → <shape>
+api: POST /x → 200 {id:string}
+cmd: `foo bar <arg>` → stdout JSON
+env: FOO_KEY ! set
+```
 
-## Encoding Example
+## EXAMPLES
 
-**Before:**
-> The API must return an error when the input is undefined or when the user is not authenticated.
+**Bad**:
+> The system should ensure that every incoming request is properly authenticated before being forwarded to its corresponding handler function.
 
-**After:**
-> `! API → error ∵ input=⊥ | user¬auth`
+**Good**:
+> V1: ∀ req → auth check before handler
 
----
+**Bad**:
+> We discovered that the token expiration check in the middleware was using a strict less-than comparison operator, which meant tokens were being rejected at the exact moment of their expiry.
 
-## Constraints
+**Good**:
+> B1: token `<` not `≤` → reject @ expiry boundary.
 
-- Only compress — never change meaning
-- §V invariants must remain independently testable after encoding
-- §G goal must remain human-readable in one line
-- Never use symbols not in the approved set (risk of ambiguity)
+**Bad**:
+> The POST endpoint at /x accepts a JSON body and returns a 200 response with an object containing the created id.
+
+**Good**:
+> api: POST /x → 200 {id}
+
+## BOUNDARIES
+
+- User asks for prose explanation → switch to normal English.
+- Spec documents for external review (RFC, pitch) → normal English.
+- Commit message → normal English (git readers expect it).
+- Diff comment in code → normal English.
+
+## WHEN UNSURE
+
+If cutting a word loses a fact, keep it. Caveman is compression, not amputation.

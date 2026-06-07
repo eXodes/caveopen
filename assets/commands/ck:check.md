@@ -5,7 +5,7 @@ argument-hint: "[§V | §I | §T | --all]"
 
 Run the ck-check skill with the following argument:
 
-{{args}}
+$ARGUMENTS
 
 Invoke the `ck-check` skill. Scope:
 

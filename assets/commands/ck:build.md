@@ -5,7 +5,7 @@ argument-hint: "[§T.n | --next | --all]"
 
 Run the ck-build skill with the following argument:
 
-{{args}}
+$ARGUMENTS
 
 Invoke the `ck-build` skill. Target selection:
 

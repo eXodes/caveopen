@@ -1,68 +1,83 @@
 ---
 name: ck-spec
-description: Create or amend SPEC.md using cavekit v4 spec skill. Use when asked to write a spec, update a spec section, backprop a bug, or generate spec from existing code.
+description: |
+  Create, amend, or backprop bugs into SPEC.md at repo root. Sole mutator
+  of the project spec. Triggers when the user asks to write a spec, start
+  a new spec, distill a spec from existing code, add invariants, amend
+  sections (§G, §C, §I, §V, §T, §B), or record a bug via backprop.
+  Common phrasings: "write the spec for...", "new spec", "bug: ...",
+  "amend §V.3", "distill spec from code", "spec this idea". Reads and
+  follows FORMAT.md for the caveman encoding rules and pipe-table shape
+  of §T and §B.
 ---
 
-# ck-spec — Spec Mutator Skill
+# spec — spec mutator
 
-You are the **sole mutator** of `SPEC.md`. All spec creation, amendment, and backprop runs through this skill. Never edit SPEC.md outside this skill's protocol.
+Read `FORMAT.md` at repo root if not already loaded. Caveman skill applies to all writes here.
 
----
+## DISPATCH
 
-## SPEC.md Format
+Inspect user request and project state:
 
-SPEC.md has exactly these sections, in this order:
+1. No `SPEC.md` at repo root AND args describe idea → **NEW**
+2. No `SPEC.md` AND `from-code` in args → **DISTILL**
+3. `SPEC.md` exists AND args start `bug:` → **BACKPROP**
+4. `SPEC.md` exists AND args start `amend` → **AMEND**
+5. `SPEC.md` exists, no args → ask user which mode
 
-```
-§G GOAL          — one-line goal, caveman encoded
-§C CONSTRAINTS   — non-negotiable bullets
-§I INTERFACES    — external surfaces (cmd/api/file/env)
-§V INVARIANTS    — numbered, testable, each line prefixed ! MUST
-§T TASKS         — pipe table: id|status|task|cites
-§B BUGS          — pipe table: id|date|cause|fix
-```
+## NEW — idea → spec
 
-See FORMAT.md (project root) for the full schema. If FORMAT.md is missing, run `ck_init` tool first.
+Input: user idea.
 
-Task status values: `x` (done) · `~` (in-progress) · `.` (pending)
+Steps:
+1. Extract goal (1 line, caveman). → §G.
+2. List constraints user stated or implied. → §C.
+3. List external surfaces user named. → §I.
+4. Propose initial invariants. → §V (numbered V1…). For each, consider: can it be expressed as a runnable command? If yes, append `→ cmd: <shell>`.
+5. Break goal into ordered tasks. → §T pipe table, all status `.`, ids T1… Include `accept` column: write explicit done-when criteria per task (testable, observable). Never leave `accept` as `.` if you can infer it.
+6. §B section with header row only (`id|date|cause|fix`).
 
----
+Write to `SPEC.md`. Show user full file. Ask: "spec OK? suggest edits or invoke build."
 
-## Invocation Modes
+## DISTILL — code → spec
 
-### `/ck:spec <idea>` — Create or expand
-If SPEC.md doesn't exist, create it from scratch. If it exists, interpret `<idea>` as a new feature or requirement and add/amend the relevant sections. Never delete existing content unless explicitly instructed.
+Walk repo. Produce §G (infer from README/package.json/main entry), §C (infer from stack), §I (enumerate public APIs/CLIs/configs), §V (derive from tests and assertions — add `→ cmd:` where test command is obvious), §T (one task per known TODO or missing test, populate `accept` from existing test names/assertions), §B (empty).
 
-### `/ck:spec amend §X.n` — Targeted amendment
-Amend a specific section or item. `§X` is the section letter (G/C/I/V/T/B), `.n` is the item index (optional). If `.n` is omitted, amend the whole section.
+Caveman everywhere. Flag uncertain items with `?` in text so user can confirm.
 
-### `/ck:spec bug: <description>` — Bug backprop
-1. Add a §B entry: `id | today's date | <root cause> | <fix applied>`
-2. Add or update a §V invariant that would catch this class of bug in future
-3. Mark related §T task as `x` if the fix was applied
+## BACKPROP — bug → §B + §V
 
-### `/ck:spec from-code` — Generate spec from codebase
-Read the project directory. Infer §G, §I, and §V from the existing code. Generate §T for obvious next tasks. Ask the user to confirm before writing.
+Input: `bug: <description>`.
 
----
+Steps:
+1. Parse bug description.
+2. Find root cause (read relevant code).
+3. Decide: would a new invariant catch recurrence? If yes → draft `V<next>`.
+4. Append §B row: `B<next>|<date>|<cause>|V<N>`.
+5. Append new invariant to §V.
+6. If fix also changes behavior → add/update §T rows.
+7. Show diff. Apply only on user OK.
 
-## Writing Rules
+Rule: every bug gets a §B entry. Invariant optional but preferred.
 
-- **§G**: One sentence, caveman-encoded (see caveman SKILL.md). Present tense. Start with a verb.
-- **§C**: Bullet list. Each item is a hard constraint. No "should" — use "must" or "never".
-- **§I**: Each interface on its own line. Format: `<type>: <name> — <description>`. Types: `cmd`, `api`, `file`, `env`.
-- **§V**: Numbered list. Each item: `! MUST <testable assertion>`. Ensure each is independently verifiable.
-- **§T**: Pipe table. Columns: `id | status | task | cites`. `cites` references §V or §I items this task satisfies.
-- **§B**: Pipe table. Columns: `id | date | cause | fix`. Date: ISO 8601 (`YYYY-MM-DD`).
+## AMEND — targeted edit
 
----
+Input: `amend §V.3` or `amend §T` etc.
 
-## Cavekit Caveman Encoding
+Read that section. Show current. Ask user what changes. Write. Show diff.
 
-Spec bodies use caveman symbols first-class. Prefer:
-- `→` over "leads to" or "results in"
-- `!` prefix for invariants (already required in §V)
-- `∀` for "for all" in §V assertions
-- `⊥` for undefined/invalid states
+Never silently rewrite sections user did not name.
 
-The §G goal line should be maximally compressed (target: one line, ≤12 words).
+## OUTPUT RULES
+
+- Caveman format per `FORMAT.md`.
+- Preserve identifiers, paths, code verbatim.
+- Numbering monotonic — never reuse §V.N or §B.N.
+- §T row `cites` column ! list §V/§I deps: `T5|.|impl auth mw|V2,I.api|V2 passes + POST → 200`.
+- §V `→ cmd:` annotations: shell commands that exit 0 on pass, non-0 on fail. No side effects.
+
+## NON-GOALS
+
+- No sub-agents. Main thread writes.
+- No dashboards, no logs, no state files beyond SPEC.md itself.
+- No auto-build after spec. User invokes build explicitly.

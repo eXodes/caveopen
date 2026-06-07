@@ -5,7 +5,7 @@ argument-hint: "[bug: <desc> | amend §X.n | from-code | <idea>]"
 
 Run the ck-spec skill with the following argument:
 
-{{args}}
+$ARGUMENTS
 
 Invoke the `ck-spec` skill. Follow its protocol exactly based on the argument:
 

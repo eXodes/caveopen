@@ -115,7 +115,7 @@ If SPEC.md > 500 lines, compact §B (old bugs drop oldest) before splitting.
 |---|---|---|
 | `/spec new` | creates | all |
 | `/spec amend` | edits | chosen |
-| `/spec bug:` | appends | §B + §V |
+| `/spec bug` | appends | §B + §V |
 | `/build` | flips | §T status `.` → `~` → `x` (requires accept evidence) |
 | `/check` | — | read only |
 | `/check --run` | — | runs §V `→ cmd:` entries, reports pass/fail |

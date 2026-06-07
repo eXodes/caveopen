@@ -1,25 +1,29 @@
 {
   "name": "caveopen",
-  "version": "0.1.0",
-  "description": "Caveman, cavekit v4, and cavemem for OpenCode",
+  "version": "0.0.0",
+  "description": "Caveman, Cavekit v4, and Cavemem for OpenCode",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/caveopen.js",
+  "types": "dist/caveopen.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "import": "./dist/caveopen.js",
+      "types": "./dist/caveopen.d.ts"
     }
+  },
+  "bin": {
+    "caveopen": "dist/cli.js"
   },
   "files": [
     "dist",
-    "assets",
-    "install.sh"
+    "assets"
   ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-test-module-mocks --test 'dist/test/**/*.test.js'",
+    "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
     "@opencode-ai/plugin": "^1.16.2"
@@ -43,9 +47,13 @@
     "cavekit",
     "cavemem"
   ],
+  "oc-plugin": ["server"],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/exodes/caveopen"
+    "url": "https://github.com/eXodes/caveopen"
   }
 }

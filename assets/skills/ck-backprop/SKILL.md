@@ -1,72 +1,89 @@
 ---
 name: ck-backprop
-description: Six-step bug backpropagation protocol for cavekit v4. Use when a bug is discovered, a test fails, or a §V invariant is violated.
+description: |
+  Bug → spec protocol. When a bug is found or a test fails, trace the cause,
+  decide whether a new §V invariant would catch recurrence, append to §B.
+  This is the one non-obvious thing SDD does that plan-then-execute doesn't.
+  Triggers on test failure, bug report, post-mortem, or explicit user ask.
 ---
 
-# ck-backprop — Bug → §B + §V Protocol
+# backprop — bug → spec
 
-Six-step protocol for propagating a discovered bug back into the spec. Every bug is an opportunity to strengthen the spec so the same class of failure can't happen silently again.
+Plan-then-execute fixes the code & forgets.
+SDD fixes the code AND edits spec so recurrence is impossible.
+That edit is backprop.
 
----
+## WHEN TO BACKPROP
 
-## When to Use
+- Test failed at build verification.
+- User reports bug.
+- Post-mortem after production incident.
+- Check flags VIOLATE with root cause found.
 
-- A test fails or a §V invariant is found to be violated
-- A runtime bug is discovered
-- A code review uncovers a logic error
-- After any failed `/ck:build` execution
+## SIX STEPS
 
----
+### 1. TRACE
+Read failure output / bug report.
+Find exact file:line of wrong behavior.
+Name root cause in one caveman sentence.
 
-## Six-Step Protocol
+### 2. ANALYZE
+Ask three questions:
+- Would a new §V invariant catch this class of bug? (most common: yes)
+- Is §I wrong — did spec claim shape the code cannot deliver? (sometimes)
+- Is §T wrong — did we build the wrong thing? (rare but real)
 
-### Step 1 — Identify root cause
-Do not just describe the symptom. Trace to the actual root cause:
-- What assumption was wrong?
-- What invariant was missing or too weak?
-- What interface was misspecified?
+### 3. PROPOSE
+Draft the spec change. Never skip §B; §V/§I/§T are case-by-case.
 
-State the root cause in one sentence, caveman-encoded.
-
-### Step 2 — Add §B entry
-Append a row to the §B BUGS table in SPEC.md:
+Template:
 ```
-| <next-id> | <YYYY-MM-DD> | <root cause, caveman encoded> | <fix applied or "pending"> |
-```
-If the fix is not yet applied, write "pending" and update it after Step 6.
-
-### Step 3 — Add or strengthen §V invariant
-The bug should have been caught by a §V invariant. Either:
-- Add a new `! MUST` invariant that would catch this class of bug, or
-- Strengthen an existing §V item that was too weak
-
-Write the invariant so it is independently testable (i.e., a test can be written directly from it).
-
-### Step 4 — Check §I for interface misspecification
-If the bug involved an interface (API, file format, CLI arg, env var):
-- Review the relevant §I entry
-- Update or add the §I entry to reflect the correct contract
-
-### Step 5 — Apply fix
-Implement the code fix. After applying:
-- Verify the new/updated §V invariant now holds
-- Run existing tests to confirm no regression
-
-### Step 6 — Mark §T
-- If this bug maps to an existing §T task, mark it `x`
-- If the fix requires new work, add a §T task (status `.`) with a `cites` referencing the new §V item
-
----
-
-## Output Format
-
-After running the protocol, report:
-
-```
-§B.n  root-cause (caveman)
-§V.n  new/updated invariant
-§I.n  updated interface (if applicable)
-fix:  <description of code change>
+§B row: B<next>|<date>|<root cause>|V<N>
+§V line: V<next>: <testable rule that would have caught it>
 ```
 
-One line per item. Caveman-encode if caveman mode is active.
+Example:
+```
+§B row: B3|2026-04-20|refund job ran twice on retry|V7
+§V line: V7: ∀ refund → idempotency key check before charge reversal
+```
+
+### 4. GENERATE TEST
+New invariant without test = lie. Add failing test first.
+Name test so it cites the invariant: `TestV7_RefundIdempotent`.
+
+### 5. VERIFY
+Fix code. Run test. Must pass. Run full suite. Must not regress.
+
+### 6. LOG
+Commit spec edit + test + code fix together.
+Commit msg: `backprop §B.<n> + §V.<N>: <one-line cause>`.
+
+## WHAT MAKES A GOOD INVARIANT
+
+- Testable in code (grep-able or assert-able).
+- Scoped to a behavior, not a file.
+- Stated positively when possible (`! hold` over `⊥ forbid`).
+- References §I surface where it applies.
+
+**Bad**: V8: code should be correct.
+**Good**: V8: ∀ pg_query ! params interpolated via driver, ⊥ string concat.
+
+## WHEN NOT TO ADD §V
+
+- Bug was purely mechanical typo with no class (`i++` vs `i--` in throwaway).
+- Fix is a one-time migration.
+- Root cause is external dep (upgrade deps instead, note in §C).
+
+Still append §B entry — record that this failure mode was considered. Future bug with same smell → §B search shows precedent.
+
+## OUTPUT SHAPE
+
+Every backprop run produces:
+1. §B entry (always).
+2. §V entry (usually).
+3. Test file (when §V added).
+4. Code fix.
+5. One commit.
+
+No dashboards. No log files. SPEC.md + git is the full history.
