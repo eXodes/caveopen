@@ -14,9 +14,9 @@ This project builds an integrated plugin for [OpenCode](https://opencode.ai), an
 
 - **Runtime:** Bun (used by OpenCode internally for plugin execution)
 - **Language:** TypeScript (preferred) or JavaScript
-- **Package:** `@opencode-ai/plugin` for types and the `tool` helper
+- **Package:** `@opencode-ai/plugin` for types and helpers
 - **SDK:** `@opencode-ai/sdk` for programmatic client access
-- **Dependencies:** Declared in `.opencode/package.json`, installed via `bun install` at startup
+- **Dependencies:** Declared in `package.json`, installed via `bun install` at startup
 
 ---
 
@@ -26,7 +26,7 @@ This project builds an integrated plugin for [OpenCode](https://opencode.ai), an
 | ----------------- | ------------------------------------- |
 | Plugin docs       | https://opencode.ai/docs/plugins      |
 | SDK docs          | https://opencode.ai/docs/sdk          |
-| Config reference  | https://opencode.ai/docs/config       |
-| Custom tools      | https://opencode.ai/docs/custom-tools |
+| Config docs       | https://opencode.ai/docs/config       |
+| Custom tools docs | https://opencode.ai/docs/custom-tools |
 | Community plugins | https://opencode.ai/docs/ecosystem    |
 | GitHub repo       | https://github.com/anomalyco/opencode |
