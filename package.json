@@ -33,10 +33,18 @@
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "cavemem": ">=1.0.0"
+    "cavemem": ">=1.0.0",
+    "@cavemem/core": ">=0.2.0",
+    "@cavemem/config": ">=0.2.0"
   },
   "peerDependenciesMeta": {
     "cavemem": {
+      "optional": true
+    },
+    "@cavemem/core": {
+      "optional": true
+    },
+    "@cavemem/config": {
       "optional": true
     }
   },
