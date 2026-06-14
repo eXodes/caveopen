@@ -1,11 +1,11 @@
 import type { Plugin } from "@opencode-ai/plugin";
-import { CavemanPlugin } from "./modules/caveman.js";
-import { CavekitPlugin } from "./modules/cavekit.js";
-import { CavememPlugin } from "./modules/cavemem.js";
+import { CavemanPlugin } from "./modules/caveman/index.js";
+import { CavekitPlugin } from "./modules/cavekit/index.js";
+import { CavememPlugin } from "./modules/cavemem/index.js";
 
-export { CavemanPlugin } from "./modules/caveman.js";
-export { CavekitPlugin } from "./modules/cavekit.js";
-export { CavememPlugin } from "./modules/cavemem.js";
+export { CavemanPlugin } from "./modules/caveman/index.js";
+export { CavekitPlugin } from "./modules/cavekit/index.js";
+export { CavememPlugin } from "./modules/cavemem/index.js";
 
 const plugins: Plugin[] = [CavemanPlugin, CavekitPlugin, CavememPlugin];
 
