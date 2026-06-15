@@ -4,10 +4,6 @@ import { cavekitHooks } from "./modules/cavekit/index.js";
 import { caveMemHooks } from "./modules/cavemem/index.js";
 import { mergeHooks } from "./lib/merge-hooks.js";
 
-export { CavemanPlugin } from "./modules/caveman/index.js";
-export { CavekitPlugin } from "./modules/cavekit/index.js";
-export { CavememPlugin } from "./modules/cavemem/index.js";
-
 export type CaveOpenMode = "caveman" | "cavekit" | "cavemem";
 
 const ALL_MODES: CaveOpenMode[] = ["caveman", "cavekit", "cavemem"];

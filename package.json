@@ -9,6 +9,18 @@
     ".": {
       "import": "./dist/caveopen.js",
       "types": "./dist/caveopen.d.ts"
+    },
+    "./caveman": {
+      "import": "./dist/modules/caveman/index.js",
+      "types": "./dist/modules/caveman/index.d.ts"
+    },
+    "./cavekit": {
+      "import": "./dist/modules/cavekit/index.js",
+      "types": "./dist/modules/cavekit/index.d.ts"
+    },
+    "./cavemem": {
+      "import": "./dist/modules/cavemem/index.js",
+      "types": "./dist/modules/cavemem/index.d.ts"
     }
   },
   "bin": {

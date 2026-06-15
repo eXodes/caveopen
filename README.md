@@ -161,13 +161,17 @@ System prompt injections land in `system[0]`/`system[1]` — the slots that Open
 
 ## Use modules separately
 
-Each module exports its plugin and hook factory individually:
+Each module is available via a subpath import. Use this when you want only one module, or to compose them manually into your own plugin:
 
 ```ts
-import { CavemanPlugin, CavekitPlugin, CavememPlugin } from "caveopen";
+import { CavemanPlugin } from "caveopen/caveman";
+import { CavekitPlugin } from "caveopen/cavekit";
+import { CavememPlugin } from "caveopen/cavemem";
 
-// or compose manually into your own plugin
-import { cavemanHooks, cavekitHooks, caveMemHooks } from "caveopen";
+// hook factories for manual composition
+import { cavemanHooks } from "caveopen/caveman";
+import { cavekitHooks } from "caveopen/cavekit";
+import { caveMemHooks } from "caveopen/cavemem";
 ```
 
 ---
