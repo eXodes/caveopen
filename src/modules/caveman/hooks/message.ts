@@ -1,6 +1,12 @@
 import type { Part, TextPart } from "@opencode-ai/sdk";
 import type { CavemanMode } from "../lib/config.js";
-import { isValidMode, readConfig, readModeFlag, removeModeFlag, writeModeFlag } from "../lib/config.js";
+import {
+  isValidMode,
+  readConfig,
+  readModeFlag,
+  removeModeFlag,
+  writeModeFlag,
+} from "../lib/config.js";
 
 const ACTIVATION_PHRASES = [
   "activate caveman",
@@ -42,8 +48,10 @@ function extractTextFromParts(parts: Part[]): string {
     .join(" ");
 }
 
-export function chatMessageHook(): NonNullable<import("@opencode-ai/plugin").Hooks["chat.message"]> {
-  return async (_input, output) => {
+export function chatMessageHook(): NonNullable<
+  import("@opencode-ai/plugin").Hooks["chat.message"]
+> {
+  return async (input, output) => {
     const text = extractTextFromParts(output.parts);
     const prompt = text.toLowerCase().trim();
 
@@ -65,9 +73,13 @@ export function chatMessageHook(): NonNullable<import("@opencode-ai/plugin").Hoo
     const activeMode = readModeFlag();
     if (activeMode && !INDEPENDENT_MODES.has(activeMode)) {
       output.parts.push({
+        id: `prt_${crypto.randomUUID().replace(/-/g, "")}`,
+        sessionID: input.sessionID,
+        messageID: output.message.id,
         type: "text",
         text: `CAVEMAN MODE ACTIVE (${activeMode}). Drop articles/filler/pleasantries/hedging. Fragments OK. Code/commits/security: write normal.`,
-      } as unknown as Part);
+        synthetic: true,
+      } as Part);
     }
   };
 }
