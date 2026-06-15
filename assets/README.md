@@ -32,53 +32,58 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 ## Hooks
 
-`caveopen` registers OpenCode hooks via three modules composed in order: **caveman → cavekit → cavemem**. Same-key handlers chain (a→b); mutations accumulate. `tool` sub-maps shallow-merge. `auth`/`provider`/`config`: last-write-wins.
+`caveopen` registers OpenCode hooks via three modules composed in order: **caveman → cavemem → cavekit**. Same-key handlers chain (a→b); mutations accumulate. `tool` sub-maps shallow-merge. `auth`/`provider`/`config`: last-write-wins.
 
 ### caveman
 
-| Hook                                 | Trigger                          | What it does                                                                                                                                                                              |
-| ------------------------------------ | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `command.execute.before`             | `/caveman-stats` command         | Reads `~/.caveman/.caveman-history.jsonl`, injects aggregate token-savings stats into session via `noReply` prompt                                                                        |
-| `experimental.provider.small_model`  | OpenCode selects aux/small model | Captures model ID — used to gate system transform (skip title-gen, compaction calls)                                                                                                      |
-| `experimental.chat.system.transform` | Every main-agent LLM call        | Pushes `SKILL.md` ruleset into `output.system[]`. If mode active, appends activation nudge. Skipped for aux model calls (V58/V60). Static bytes → Anthropic prompt-cache prefix preserved |
-| `chat.message`                       | User submits a message           | Parses `/caveman [mode\|off]` and natural-language equivalents; updates per-session `activeMode` map                                                                                      |
-| `event` (`session.created`)          | New session opened               | Clears `activeMode` entry for that session ID                                                                                                                                             |
-| `event` (`message.updated`)          | Assistant message completed      | Reads output token count; computes estimated saved tokens from compression ratio; appends JSONL row to `~/.caveman/.caveman-history.jsonl`                                                |
+| Hook                                 | Trigger                        | What it does                                                                                                                                        |
+| ------------------------------------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `experimental.chat.system.transform` | Every main-agent LLM call      | Reads mode flag from disk; if active, unshifts ruleset into `output.system[]`                                                                       |
+| `chat.message`                       | User submits a message         | Parses `/caveman [lite\|full\|ultra\|wenyan-*\|off]` and natural-language phrases; writes mode flag to disk; appends per-turn reminder nudge to `output.parts` when mode is active (skipped for `commit`/`review`/`compress` modes) |
+| `command.execute.before`             | `/caveman-stats` command       | Fetches live session token counts via client API; formats stats. Accepts `--all` (lifetime history) and `--since Nd` (last N days) flags; pushes text part into output |
+| `event` (`session.created`)         | New session opened             | Reads `defaultMode` from config; writes mode flag if none set and default is not `off`                                                              |
+| `event` (`session.idle`)            | Session goes idle              | Fetches session token counts; computes estimated saved tokens/USD; appends JSONL row to `~/.caveman/.caveman-history.jsonl`; writes statusline suffix |
+| `event` (`session.idle`)            | Session goes idle (TUI)        | Shows toast `[CAVEMAN:MODE] active` via `tui.showToast`; no-ops in headless                                                                         |
+| `event` (`tui.prompt.append`)       | TUI prompts for status         | Appends `[CAVEMAN:MODE] <stats-suffix>` badge via `tui.appendPrompt`; no-ops in headless                                                            |
 
 ### cavekit
 
-| Hook                     | Trigger                    | What it does                                                              |
-| ------------------------ | -------------------------- | ------------------------------------------------------------------------- |
-| `command.execute.before` | `/ck:init` command         | Copies `FORMAT.md` to project root; injects result as synthetic text part |
+| Hook                                 | Trigger                        | What it does                                                                                                       |
+| ------------------------------------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `command.execute.before`             | `/ck:init` command (`ck-init`) | Copies `FORMAT.md` to `process.cwd()`; skips if already present; injects result text into output parts            |
+| `experimental.chat.system.transform` | Every main-agent LLM call      | Reads cached SPEC.md summary for session; pushes it into `output.system[]`                                         |
+| `event` (`session.created`)         | New session opened             | Reads `SPEC.md` from cwd; extracts compact summary; stores in per-session cache                                    |
+| `event` (`file.watcher.updated`)    | File change detected           | If changed path ends with `SPEC.md`, marks all active sessions dirty — cache refreshes on next system transform    |
 
 ### cavemem
 
-| Hook                                         | Trigger                         | What it does                                                                                                               |
-| -------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `experimental.chat.system.transform`         | Every main-agent LLM call       | Pushes static note about cavemem memory tools into `output.system[]` — only if MCP server is configured in `opencode.json` |
-| `tool.execute.after`                         | Any tool completes              | Buffers `{tool_name, tool_input, tool_response}` per session; does not flush yet                                           |
-| `event` (`session.created`)                  | New session opened              | Registers session ID; defers cavemem `session-start` until first real user message                                         |
-| `event` (`message.updated` — user)           | First real user message         | Calls `cavemem hook run session-start`; then `user-prompt-submit` on every subsequent user message                         |
-| `event` (`message.updated` — assistant)      | Assistant message completed     | Calls `cavemem hook run stop` with turn summary text                                                                       |
-| `event` (`session.idle` / `session.deleted`) | Session goes idle or is deleted | Flushes buffered tool observations via `post-tool-use`; calls `session-end`                                                |
-| `event` (`message.part.updated`)             | Streaming text part updated     | Accumulates latest full assistant text per message ID (replace, not append)                                                |
-| `dispose`                                    | Plugin teardown                 | Removes `exit`/`SIGTERM`/`SIGINT` signal handlers                                                                          |
+Cavemem uses an **embedded SQLite store** (via `getStore()`) — no external CLI or MCP server required. The store lives at `~/.cavemem/memory.db`.
+
+| Hook                                 | Trigger              | What it does                                                                                                                   |
+| ------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]` (up to 3 prior sessions, same cwd) |
+| `chat.message`                       | User submits message | Records user prompt as `user_prompt` observation in store; enqueues embedding (best-effort, no embedder wired by default)      |
+| `tool.execute.after`                 | Any tool completes   | Records `tool_name + input + output` (truncated to 4000 chars) as `tool_use` observation in store                             |
+| `event` (`session.created`)         | New session opened   | Starts session in store; fetches summaries from up to 3 prior sessions in same cwd; caches as system context                  |
+| `event` (`session.idle`)            | Session goes idle    | Fetches last assistant message text; stores as `turn`-scope summary in store                                                   |
+| `event` (`session.deleted`)         | Session deleted      | Collapses all `turn` summaries (up to 20) into a `session`-scope summary; ends session; clears session cache                  |
+| `dispose`                            | Plugin teardown      | Closes the SQLite store                                                                                                        |
 
 ### Hook composition
 
 ```
-CaveopenPlugin
-  ├── caveman(input)   → Partial<Hooks>  ─┐
-  ├── cavekit(input)   → Partial<Hooks>  ─┤ composeHooks(a, b)
-  └── cavemem(input)   → Partial<Hooks>  ─┘
+CaveOpenPlugin
+  ├── cavemanHooks(ctx)  → Hooks  ─┐
+  ├── caveMemHooks(ctx)  → Hooks  ─┤ mergeHooks(...hookSets)
+  └── cavekitHooks(ctx)  → Hooks  ─┘
 
-composeHooks rules:
+mergeHooks rules:
   same key (non-tool): chain a → b (both fire, output mutations accumulate)
   "tool":              shallow-merge sub-maps
   "auth"|"provider"|"config": last-write-wins (b)
 ```
 
-Hook handlers are non-fatal by default — errors in `a` are caught and logged; `b` still runs.
+Modules excluded by `modes` option are omitted from `hookSets` entirely. Hook handlers are non-fatal by default — errors in `a` are caught and logged; `b` still runs.
 
 ---
 
@@ -162,11 +167,11 @@ Opt into specific modules only:
 
 ```json
 {
-  "plugin": [["caveopen", { "modes": "caveman,cavekit" }]]
+  "plugin": [["caveopen", { "modes": ["caveman", "cavekit"] }]]
 }
 ```
 
-Modes: `caveman` | `cavekit` | `cavemem` (default: all three)
+Modes: `caveman` | `cavekit` | `cavemem` (default: all three, as an array)
 
 ---
 
