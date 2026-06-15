@@ -1,14 +1,22 @@
-import type { Plugin } from "@opencode-ai/plugin";
+import type { Plugin, PluginInput, Hooks } from "@opencode-ai/plugin";
+import { commandExecuteBeforeHook } from "./hooks/command.js";
+import { handleSessionCreated, systemTransformHook } from "./hooks/session-init.js";
+import { handleFileWatcherUpdated } from "./hooks/file-watcher.js";
 
-/**
- * CavekitPlugin — spec-driven development (SDD) hooks.
- */
-export const CavekitPlugin: Plugin = async ({ client }) => {
-  await client.app.log({
+export function cavekitHooks(ctx: PluginInput): Hooks {
+  return {
+    "command.execute.before": commandExecuteBeforeHook(),
+    "experimental.chat.system.transform": systemTransformHook(),
+    event: async ({ event }) => {
+      await handleSessionCreated(event);
+      await handleFileWatcherUpdated(event, ctx);
+    },
+  };
+}
+
+export const CavekitPlugin: Plugin = async (ctx) => {
+  await ctx.client.app.log({
     body: { service: "caveopen:cavekit", level: "info", message: "loaded" },
   });
-
-  return {
-    // TODO: implement cavekit hooks
-  };
+  return cavekitHooks(ctx);
 };
