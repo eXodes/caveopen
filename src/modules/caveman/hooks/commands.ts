@@ -1,15 +1,21 @@
-import type { PluginInput } from "@opencode-ai/plugin";
+import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 import type { Part } from "@opencode-ai/sdk";
 import { HISTORY_PATH, readModeFlag } from "../lib/config.js";
 import { aggregateHistory, parseHistory } from "../lib/history.js";
 import { formatHistory, formatStats } from "../lib/stats.js";
 import { getSessionTokens } from "../lib/tokens.js";
 
+const executedKeys = new Set<string>();
+
 export function commandExecuteBeforeHook(
   ctx: PluginInput,
-): NonNullable<import("@opencode-ai/plugin").Hooks["command.execute.before"]> {
+): NonNullable<Hooks["command.execute.before"]> {
   return async (input, output) => {
     if (input.command !== "caveman-stats") return;
+
+    const key = `${input.sessionID}:${input.command}`;
+    if (executedKeys.has(key)) return;
+    executedKeys.add(key);
 
     const args = input.arguments ?? "";
     const showAll = args.includes("--all");
@@ -18,8 +24,9 @@ export function commandExecuteBeforeHook(
 
     const tokens = await getSessionTokens(ctx.client, input.sessionID);
     const sessionStats = formatStats({
-      tokens: tokens
-        ? {
+      tokens:
+        tokens ?
+          {
             input: tokens.input,
             output: tokens.output,
             cache: tokens.cache,

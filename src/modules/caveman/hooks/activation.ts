@@ -1,5 +1,5 @@
 import type { Event } from "@opencode-ai/sdk";
-import type { PluginInput } from "@opencode-ai/plugin";
+import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 import {
   readConfig,
   readModeFlag,
@@ -10,9 +10,7 @@ import { buildRuleset } from "../lib/ruleset.js";
 
 export function systemTransformHook(
   ctx: PluginInput,
-): NonNullable<
-  import("@opencode-ai/plugin").Hooks["experimental.chat.system.transform"]
-> {
+): NonNullable<Hooks["experimental.chat.system.transform"]> {
   return async (input, output) => {
     const mode = readModeFlag();
     if (!mode) return;
