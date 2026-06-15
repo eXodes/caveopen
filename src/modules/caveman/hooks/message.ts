@@ -8,7 +8,7 @@ import {
   removeModeFlag,
   writeModeFlag,
 } from "../lib/config.js";
-import { cuid } from "../../../lib/cuid.js";
+import { cuid, partId } from "../../../lib/cuid.js";
 
 const ACTIVATION_PHRASES = [
   "activate caveman",
@@ -75,7 +75,7 @@ export function chatMessageHook(
     const activeMode = readModeFlag();
     if (activeMode && !INDEPENDENT_MODES.has(activeMode)) {
       output.parts.push({
-        id: `prt_${cuid()}`,
+        id: partId(),
         sessionID: input.sessionID,
         messageID: output.message.id,
         type: "text",

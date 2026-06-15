@@ -18,3 +18,15 @@ export function cuid({ length = 24 } = {}) {
 
   return (prefix + hash).substring(0, length);
 }
+
+export function partId() {
+  return `prt_${cuid()}`;
+}
+
+export function sessionId() {
+  return `ses_${cuid()}`;
+}
+
+export function messageId() {
+  return `msg_${cuid()}`;
+}
