@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
+import { log } from "node:console";
 
 export function commandExecuteBeforeHook(
   ctx: PluginInput,
@@ -22,12 +23,13 @@ export function commandExecuteBeforeHook(
           return `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`;
         })();
 
-    await ctx.client.session.prompt({
-      path: { id: input.sessionID },
-      body: {
-        noReply: true,
-        parts: [{ type: "text", text: text }],
-      },
+    output.parts.splice(0, output.parts.length, {
+      id: output.parts[0].id,
+      messageID: output.parts[0].messageID,
+      sessionID: input.sessionID,
+      type: "text",
+      text,
+      ignored: true,
     });
   };
 }
