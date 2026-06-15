@@ -1,5 +1,8 @@
 import type { Plugin, PluginInput, Hooks } from "@opencode-ai/plugin";
-import { handleSessionCreated, systemTransformHook } from "./hooks/session-init.js";
+import {
+  handleSessionCreated,
+  systemTransformHook,
+} from "./hooks/session-init.js";
 import { chatMessageHook } from "./hooks/message.js";
 import { toolUseHook } from "./hooks/tool-use.js";
 import { handleSessionIdle } from "./hooks/turn-summary.js";
@@ -7,14 +10,14 @@ import { handleSessionDeleted, disposeHook } from "./hooks/session-end.js";
 
 export function caveMemHooks(ctx: PluginInput): Hooks {
   return {
-    "experimental.chat.system.transform": systemTransformHook(),
+    "experimental.chat.system.transform": systemTransformHook(ctx),
     "chat.message": chatMessageHook(ctx),
     "tool.execute.after": toolUseHook(ctx),
-    dispose: disposeHook,
-    event: async ({ event }) => {
-      await handleSessionCreated(event);
+    "dispose": disposeHook,
+    "event": async ({ event }) => {
+      await handleSessionCreated(event, ctx);
       await handleSessionIdle(event, ctx);
-      await handleSessionDeleted(event);
+      await handleSessionDeleted(event, ctx);
     },
   };
 }

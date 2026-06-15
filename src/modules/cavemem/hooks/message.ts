@@ -4,7 +4,7 @@ import { extractText } from "../lib/text.js";
 import { enqueueEmbedding } from "../lib/worker.js";
 
 export function chatMessageHook(
-  _ctx: PluginInput,
+  ctx: PluginInput,
 ): NonNullable<Hooks["chat.message"]> {
   return async (input, output) => {
     const text = extractText(output.parts);

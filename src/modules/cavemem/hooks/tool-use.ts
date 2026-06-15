@@ -4,7 +4,7 @@ import { stringifyShort } from "../lib/text.js";
 import { enqueueEmbedding } from "../lib/worker.js";
 
 export function toolUseHook(
-  _ctx: PluginInput,
+  ctx: PluginInput,
 ): NonNullable<Hooks["tool.execute.after"]> {
   return async (input, output) => {
     const body = [

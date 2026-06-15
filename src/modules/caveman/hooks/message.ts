@@ -1,4 +1,5 @@
 import type { Part, TextPart } from "@opencode-ai/sdk";
+import type { PluginInput } from "@opencode-ai/plugin";
 import type { CavemanMode } from "../lib/config.js";
 import {
   isValidMode,
@@ -48,9 +49,9 @@ function extractTextFromParts(parts: Part[]): string {
     .join(" ");
 }
 
-export function chatMessageHook(): NonNullable<
-  import("@opencode-ai/plugin").Hooks["chat.message"]
-> {
+export function chatMessageHook(
+  ctx: PluginInput,
+): NonNullable<import("@opencode-ai/plugin").Hooks["chat.message"]> {
   return async (input, output) => {
     const text = extractTextFromParts(output.parts);
     const prompt = text.toLowerCase().trim();

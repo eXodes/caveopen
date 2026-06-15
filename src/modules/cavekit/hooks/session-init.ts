@@ -1,13 +1,21 @@
 import type { Event } from "@opencode-ai/sdk";
-import type { Hooks } from "@opencode-ai/plugin";
+import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 import { readSpec, extractSpecSummary } from "../lib/spec.js";
-import { getSpecContext, setSpecContext, hasSpecSession } from "../lib/cache.js";
+import {
+  getSpecContext,
+  setSpecContext,
+  hasSpecSession,
+} from "../lib/cache.js";
 
-export async function handleSessionCreated(event: Event): Promise<void> {
+export async function handleSessionCreated(
+  event: Event,
+  ctx: PluginInput,
+): Promise<void> {
   if (event.type !== "session.created") return;
 
-  const sessionID = (event.properties as unknown as Record<string, string> | undefined)
-    ?.sessionID;
+  const sessionID = (
+    event.properties as unknown as Record<string, string> | undefined
+  )?.sessionID;
   if (!sessionID) return;
 
   if (hasSpecSession(sessionID)) return;
@@ -22,9 +30,13 @@ export async function handleSessionCreated(event: Event): Promise<void> {
   setSpecContext(sessionID, summary);
 }
 
-export function systemTransformHook(): NonNullable<Hooks["experimental.chat.system.transform"]> {
+export function systemTransformHook(
+  ctx: PluginInput,
+): NonNullable<Hooks["experimental.chat.system.transform"]> {
   return async (input, output) => {
-    const sessionID = (input as Record<string, unknown>)["sessionID"] as string | undefined;
+    const sessionID = (input as Record<string, unknown>)["sessionID"] as
+      | string
+      | undefined;
     if (!sessionID) return;
 
     const ctx = getSpecContext(sessionID);

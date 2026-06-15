@@ -1,12 +1,17 @@
 import type { Event } from "@opencode-ai/sdk";
 import { getStore, closeStore } from "../lib/store.js";
 import { deleteCachedContext } from "../lib/session-cache.js";
+import { PluginInput } from "@opencode-ai/plugin";
 
-export async function handleSessionDeleted(event: Event): Promise<void> {
+export async function handleSessionDeleted(
+  event: Event,
+  ctx: PluginInput,
+): Promise<void> {
   if (event.type !== "session.deleted") return;
 
-  const sessionID = (event.properties as unknown as Record<string, string> | undefined)
-    ?.sessionID;
+  const sessionID = (
+    event.properties as unknown as Record<string, string> | undefined
+  )?.sessionID;
   if (!sessionID) return;
 
   const store = await getStore();

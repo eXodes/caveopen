@@ -4,12 +4,13 @@ import { allSessionIDs, markSpecDirty } from "../lib/cache.js";
 
 export async function handleFileWatcherUpdated(
   event: Event,
-  ctx: PluginInput
+  ctx: PluginInput,
 ): Promise<void> {
   if (event.type !== "file.watcher.updated") return;
 
   const changedPath =
-    (event.properties as unknown as Record<string, string> | undefined)?.path ?? "";
+    (event.properties as unknown as Record<string, string> | undefined)?.path ??
+    "";
   if (!changedPath.endsWith("SPEC.md")) return;
 
   for (const id of allSessionIDs()) {

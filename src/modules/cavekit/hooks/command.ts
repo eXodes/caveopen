@@ -2,14 +2,14 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Hooks } from "@opencode-ai/plugin";
+import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 import type { Part } from "@opencode-ai/sdk";
 
 const executedKeys = new Set<string>();
 
-export function commandExecuteBeforeHook(): NonNullable<
-  Hooks["command.execute.before"]
-> {
+export function commandExecuteBeforeHook(
+  ctx: PluginInput,
+): NonNullable<Hooks["command.execute.before"]> {
   return async (input, output) => {
     if (input.command !== "ck:init") return;
 

@@ -1,5 +1,5 @@
 import type { Event } from "@opencode-ai/sdk";
-import type { Hooks } from "@opencode-ai/plugin";
+import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 import { getStore } from "../lib/store.js";
 import {
   getCachedContext,
@@ -7,11 +7,15 @@ import {
   setCachedContext,
 } from "../lib/session-cache.js";
 
-export async function handleSessionCreated(event: Event): Promise<void> {
+export async function handleSessionCreated(
+  event: Event,
+  ctx: PluginInput,
+): Promise<void> {
   if (event.type !== "session.created") return;
 
-  const sessionID = (event.properties as unknown as Record<string, string> | undefined)
-    ?.sessionID;
+  const sessionID = (
+    event.properties as unknown as Record<string, string> | undefined
+  )?.sessionID;
   if (!sessionID) return;
 
   if (hasSession(sessionID)) return;
@@ -26,7 +30,10 @@ export async function handleSessionCreated(event: Event): Promise<void> {
 
   const recent = store.storage.listSessions(20);
   const hints = recent
-    .filter((s: { id: string; cwd: string | null }) => s.id !== sessionID && s.cwd === process.cwd())
+    .filter(
+      (s: { id: string; cwd: string | null }) =>
+        s.id !== sessionID && s.cwd === process.cwd(),
+    )
     .slice(0, 3)
     .map((s: { id: string }) => {
       const summaries = store.storage.listSummaries(s.id).slice(0, 1);
@@ -34,17 +41,17 @@ export async function handleSessionCreated(event: Event): Promise<void> {
     })
     .filter(Boolean);
 
-  const ctx =
-    hints.length > 0
-      ? `## Prior-session context\n${hints.join("\n---\n")}`
-      : "";
+  const prevContext =
+    hints.length > 0 ?
+      `## Prior-session context\n${hints.join("\n---\n")}`
+    : "";
 
-  setCachedContext(sessionID, ctx);
+  setCachedContext(sessionID, prevContext);
 }
 
-export function systemTransformHook(): NonNullable<
-  Hooks["experimental.chat.system.transform"]
-> {
+export function systemTransformHook(
+  ctx: PluginInput,
+): NonNullable<Hooks["experimental.chat.system.transform"]> {
   return async (input, output) => {
     const sessionID = (input as Record<string, unknown>)["sessionID"] as
       | string
