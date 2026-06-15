@@ -8,18 +8,32 @@ export { CavemanPlugin } from "./modules/caveman/index.js";
 export { CavekitPlugin } from "./modules/cavekit/index.js";
 export { CavememPlugin } from "./modules/cavemem/index.js";
 
-export const CaveOpenPlugin: Plugin = async (ctx) => {
-  await Promise.all([
-    ctx.client.app.log({
-      body: { service: "caveopen", level: "info", message: "loaded" },
-    }),
-  ]);
+export type CaveOpenMode = "caveman" | "cavekit" | "cavemem";
 
-  return mergeHooks(
-    cavemanHooks(ctx),
-    caveMemHooks(ctx),
-    cavekitHooks(ctx)
-  );
+const ALL_MODES: CaveOpenMode[] = ["caveman", "cavekit", "cavemem"];
+
+export const CaveOpenPlugin: Plugin = async (ctx, options) => {
+  const modes: CaveOpenMode[] = Array.isArray(options?.modes)
+    ? (options.modes as string[]).filter((m): m is CaveOpenMode =>
+        ALL_MODES.includes(m as CaveOpenMode)
+      )
+    : ALL_MODES;
+
+  await ctx.client.app.log({
+    body: {
+      service: "caveopen",
+      level: "info",
+      message: `loaded (modes: ${modes.join(", ")})`,
+    },
+  });
+
+  const hookSets = [
+    modes.includes("caveman") && cavemanHooks(ctx),
+    modes.includes("cavemem") && caveMemHooks(ctx),
+    modes.includes("cavekit") && cavekitHooks(ctx),
+  ].filter(Boolean) as Parameters<typeof mergeHooks>;
+
+  return mergeHooks(...hookSets);
 };
 
 export default CaveOpenPlugin;

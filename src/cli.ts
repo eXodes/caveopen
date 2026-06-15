@@ -265,7 +265,10 @@ function runCLI(): void {
   const filtered = (config.plugin as unknown[]).filter(
     (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
   );
-  const entry: unknown = modes ? ["caveopen", { modes }] : "caveopen";
+  const modesArray = modes
+    ? modes.split(",").map((m) => m.trim()).filter(Boolean)
+    : undefined;
+  const entry: unknown = modesArray ? ["caveopen", { modes: modesArray }] : "caveopen";
   filtered.push(entry);
 
   // inject mcp.cavemem when cavemem mode included

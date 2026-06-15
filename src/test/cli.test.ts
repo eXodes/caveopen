@@ -222,7 +222,10 @@ describe("plugin entry deduplication", () => {
     const filtered = plugins.filter(
       (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
     );
-    const entry: unknown = modes ? ["caveopen", { modes }] : "caveopen";
+    const modesArray = modes
+      ? modes.split(",").map((m) => m.trim()).filter(Boolean)
+      : undefined;
+    const entry: unknown = modesArray ? ["caveopen", { modes: modesArray }] : "caveopen";
     return [...filtered, entry];
   }
 
@@ -233,7 +236,7 @@ describe("plugin entry deduplication", () => {
 
   it("adds array entry when modes specified", () => {
     const result = applyEntry([], "caveman");
-    assert.deepStrictEqual(result, [["caveopen", { modes: "caveman" }]]);
+    assert.deepStrictEqual(result, [["caveopen", { modes: ["caveman"] }]]);
   });
 
   it("idempotent: deduplicates existing string entry", () => {
@@ -243,9 +246,9 @@ describe("plugin entry deduplication", () => {
   });
 
   it("idempotent: deduplicates existing array entry", () => {
-    const result = applyEntry([["caveopen", { modes: "caveman" }]], "cavekit");
+    const result = applyEntry([["caveopen", { modes: ["caveman"] }]], "cavekit");
     assert.strictEqual(result.length, 1);
-    assert.deepStrictEqual(result[0], ["caveopen", { modes: "cavekit" }]);
+    assert.deepStrictEqual(result[0], ["caveopen", { modes: ["cavekit"] }]);
   });
 
   it("preserves other plugin entries", () => {
@@ -449,10 +452,10 @@ describe("tui config injection", () => {
 
   it("no plugin key: modes form produces array entry", () => {
     const raw = `{"theme":"dark"}`;
-    const entry = ["caveopen", { modes: "caveman" }];
+    const entry = ["caveopen", { modes: ["caveman"] }];
     const out = applyTuiPlugin(raw, entry);
     const parsed = JSON.parse(out) as Record<string, unknown>;
-    assert.deepStrictEqual(parsed.plugin, [["caveopen", { modes: "caveman" }]]);
+    assert.deepStrictEqual(parsed.plugin, [["caveopen", { modes: ["caveman"] }]]);
   });
 
   it("idempotent: deduplicates existing caveopen string entry", () => {
@@ -465,15 +468,15 @@ describe("tui config injection", () => {
   });
 
   it("idempotent: deduplicates existing caveopen array entry", () => {
-    const raw = `{"plugin":[["caveopen",{"modes":"caveman"}]]}`;
-    const out = applyTuiPlugin(raw, ["caveopen", { modes: "cavekit" }]);
+    const raw = `{"plugin":[["caveopen",{"modes":["caveman"]}]]}`;
+    const out = applyTuiPlugin(raw, ["caveopen", { modes: ["cavekit"] }]);
     const parsed = parseJsonc(out);
     const plugins = parsed.plugin as unknown[];
     assert.strictEqual(
       plugins.filter((e) => Array.isArray(e) && e[0] === "caveopen").length,
       1,
     );
-    assert.deepStrictEqual(plugins[0], ["caveopen", { modes: "cavekit" }]);
+    assert.deepStrictEqual(plugins[0], ["caveopen", { modes: ["cavekit"] }]);
   });
 
   it("mcp key NOT injected into tui output", () => {

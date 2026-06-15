@@ -122,11 +122,11 @@ Three compressed-output subagents available inside OpenCode sessions:
 
 ```json
 {
-  "plugin": [["caveopen", { "modes": "caveman,cavekit" }]]
+  "plugin": [["caveopen", { "modes": ["caveman", "cavekit"] }]]
 }
 ```
 
-`modes` accepts a comma-separated list of `caveman`, `cavekit`, and `cavemem`. Default is all three.
+`modes` accepts an array of `caveman`, `cavekit`, and `cavemem`. Default is all three. The CLI flag `--modes caveman,cavekit` accepts a comma-separated string and converts it to array form automatically.
 
 ### Override agent models
 
