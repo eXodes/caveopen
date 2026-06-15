@@ -5,28 +5,39 @@ import { fileURLToPath } from "node:url";
 import type { Hooks } from "@opencode-ai/plugin";
 import type { Part } from "@opencode-ai/sdk";
 
-export function commandExecuteBeforeHook(): NonNullable<Hooks["command.execute.before"]> {
+const executedKeys = new Set<string>();
+
+export function commandExecuteBeforeHook(): NonNullable<
+  Hooks["command.execute.before"]
+> {
   return async (input, output) => {
-    if (input.command !== "ck-init") return;
+    if (input.command !== "ck:init") return;
+
+    const key = `${input.sessionID}:${input.command}`;
+    if (executedKeys.has(key)) return;
+    executedKeys.add(key);
 
     const destFormat = path.join(process.cwd(), "FORMAT.md");
 
     if (existsSync(destFormat)) {
       output.parts.push({
+        sessionID: input.sessionID,
         type: "text",
         text: `FORMAT.md already exists at ${destFormat}.`,
-      } as unknown as Part);
+      } as Part);
       return;
     }
 
     const pluginDir = path.dirname(fileURLToPath(import.meta.url));
-    const sourceFormat = path.join(pluginDir, "../../FORMAT.md");
+    const sourceFormat = path.join(pluginDir, "../assets/FORMAT.md");
 
     await fs.copyFile(sourceFormat, destFormat);
 
     output.parts.push({
+      sessionID: input.sessionID,
       type: "text",
       text: `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`,
-    } as unknown as Part);
+    } as Part);
+    return;
   };
 }

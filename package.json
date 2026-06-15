@@ -19,7 +19,7 @@
     "assets"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && copyfiles -u 1 \"src/**/*.md\" dist",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-test-module-mocks --test 'dist/test/**/*.test.js'",
@@ -30,12 +30,13 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.2",
+    "copyfiles": "^2.4.1",
     "typescript": "^6.0.3"
   },
   "peerDependencies": {
-    "cavemem": ">=1.0.0",
+    "@cavemem/config": ">=0.2.0",
     "@cavemem/core": ">=0.2.0",
-    "@cavemem/config": ">=0.2.0"
+    "cavemem": ">=1.0.0"
   },
   "peerDependenciesMeta": {
     "cavemem": {
@@ -55,7 +56,9 @@
     "cavekit",
     "cavemem"
   ],
-  "oc-plugin": ["server"],
+  "oc-plugin": [
+    "server"
+  ],
   "license": "MIT",
   "publishConfig": {
     "access": "public"
