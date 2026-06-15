@@ -223,29 +223,7 @@ event: async ({ event }) => {
 
 **Solution:** Two-layer approach, mirroring opencode-quota's pattern.
 
-### Layer A — Mode Change Toast (server plugin, always available)
-
-```ts
-// Show toast when mode is activated/changed
-event: async ({ event }) => {
-  if (event.type !== "session.idle") return;
-  const activeMode = readModeFlag();
-  if (!activeMode || activeMode === "off") return;
-
-  try {
-    await client.tui.showToast({
-      body: {
-        message: `[CAVEMAN:${activeMode.toUpperCase()}] active`,
-        variant: "info",
-      },
-    });
-  } catch {
-    // headless — no TUI, skip silently
-  }
-},
-```
-
-### Layer B — Compact Status Badge (TUI plugin, interactive mode only)
+### Compact Status Badge (TUI plugin, interactive mode only)
 
 Registered in `tui.json` alongside the server plugin registration in `opencode.json`.
 
