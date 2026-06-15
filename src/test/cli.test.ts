@@ -390,3 +390,106 @@ describe("spliceMcpCavemem", () => {
     assert.ok("other" in mcp);
   });
 });
+
+// ─── tui config injection ───────────────────────────────────────────
+
+/**
+ * Simulate the tui.json injection path from runCLI().
+ * entry: "caveopen" | ["caveopen", {modes}]
+ */
+function applyTuiPlugin(tuiRaw: string, entry: unknown): string {
+  const tuiConfig = parseJsonc(tuiRaw);
+  if (!Array.isArray(tuiConfig.plugin)) tuiConfig.plugin = [];
+  const filtered = (tuiConfig.plugin as unknown[]).filter(
+    (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
+  );
+  filtered.push(entry);
+  if (/\"plugin\"\s*:/.test(tuiRaw)) {
+    return splicePluginArray(tuiRaw, filtered);
+  }
+  tuiConfig.plugin = filtered;
+  return JSON.stringify(tuiConfig, null, 2) + "\n";
+}
+
+describe("tui config injection", () => {
+  it("existing plugin key: splices in caveopen, preserves other keys", () => {
+    const raw = `{
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "tokyonight",
+  "plugin": ["other-plugin"]
+}`;
+    const out = applyTuiPlugin(raw, "caveopen");
+    const parsed = parseJsonc(out);
+    assert.ok(Array.isArray(parsed.plugin));
+    assert.ok((parsed.plugin as unknown[]).includes("caveopen"));
+    assert.ok((parsed.plugin as unknown[]).includes("other-plugin"));
+    assert.strictEqual(parsed["theme"], "tokyonight");
+    assert.strictEqual(parsed["$schema"], "https://opencode.ai/tui.json");
+  });
+
+  it("existing plugin key: preserves JSONC comments", () => {
+    const raw = `{
+  // tui config
+  "theme": "dark",
+  "plugin": ["x"] // plugins
+}`;
+    const out = applyTuiPlugin(raw, "caveopen");
+    assert.ok(out.includes("// tui config"));
+    assert.ok(out.includes("// plugins"));
+    assert.ok(out.includes('"caveopen"'));
+  });
+
+  it("no plugin key: adds plugin array via JSON path", () => {
+    const raw = `{"$schema":"https://opencode.ai/tui.json","theme":"dark"}`;
+    const out = applyTuiPlugin(raw, "caveopen");
+    const parsed = JSON.parse(out) as Record<string, unknown>;
+    assert.deepStrictEqual(parsed.plugin, ["caveopen"]);
+    assert.strictEqual(parsed["theme"], "dark");
+  });
+
+  it("no plugin key: modes form produces array entry", () => {
+    const raw = `{"theme":"dark"}`;
+    const entry = ["caveopen", { modes: "caveman" }];
+    const out = applyTuiPlugin(raw, entry);
+    const parsed = JSON.parse(out) as Record<string, unknown>;
+    assert.deepStrictEqual(parsed.plugin, [["caveopen", { modes: "caveman" }]]);
+  });
+
+  it("idempotent: deduplicates existing caveopen string entry", () => {
+    const raw = `{"plugin":["caveopen","other"]}`;
+    const out = applyTuiPlugin(raw, "caveopen");
+    const parsed = parseJsonc(out);
+    const plugins = parsed.plugin as unknown[];
+    assert.strictEqual(plugins.filter((e) => e === "caveopen").length, 1);
+    assert.ok(plugins.includes("other"));
+  });
+
+  it("idempotent: deduplicates existing caveopen array entry", () => {
+    const raw = `{"plugin":[["caveopen",{"modes":"caveman"}]]}`;
+    const out = applyTuiPlugin(raw, ["caveopen", { modes: "cavekit" }]);
+    const parsed = parseJsonc(out);
+    const plugins = parsed.plugin as unknown[];
+    assert.strictEqual(
+      plugins.filter((e) => Array.isArray(e) && e[0] === "caveopen").length,
+      1,
+    );
+    assert.deepStrictEqual(plugins[0], ["caveopen", { modes: "cavekit" }]);
+  });
+
+  it("mcp key NOT injected into tui output", () => {
+    const raw = `{"plugin":[]}`;
+    const out = applyTuiPlugin(raw, "caveopen");
+    const parsed = parseJsonc(out);
+    assert.ok(!("mcp" in parsed), "mcp must not appear in tui output");
+  });
+
+  it("output line format: scope:tui token", () => {
+    const line = `${colorLabel("registered", false)}  ${blue("plugin", false)} caveopen → ${blue("global:tui", false)} plugin`;
+    assert.strictEqual(line, "registered  plugin caveopen → global:tui plugin");
+  });
+
+  it("output line format: updated when tui already had caveopen", () => {
+    const line = `${colorLabel("updated", false)}  ${blue("plugin", false)} caveopen → ${blue("project:tui", false)} plugin`;
+    assert.strictEqual(line, "updated  plugin caveopen → project:tui plugin");
+  });
+});

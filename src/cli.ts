@@ -323,6 +323,47 @@ function runCLI(): void {
     printFail(`write config: ${e instanceof Error ? e.message : String(e)}`);
   }
 
+  // ── TUI config (tui.json / tui.jsonc) — update if present ──────────
+  let tuiPath: string | null = null;
+  if (existsSync(join(opencodeDir, "tui.jsonc"))) {
+    tuiPath = join(opencodeDir, "tui.jsonc");
+  } else if (existsSync(join(opencodeDir, "tui.json"))) {
+    tuiPath = join(opencodeDir, "tui.json");
+  }
+
+  if (tuiPath) {
+    try {
+      const tuiRaw = readFileSync(tuiPath, "utf8");
+      const tuiConfig = parseJsonc(tuiRaw);
+      if (!Array.isArray(tuiConfig.plugin)) tuiConfig.plugin = [];
+
+      const tuiHadCaveopen = (tuiConfig.plugin as unknown[]).some(
+        (e) => e === "caveopen" || (Array.isArray(e) && e[0] === "caveopen"),
+      );
+
+      const tuiFiltered = (tuiConfig.plugin as unknown[]).filter(
+        (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
+      );
+      tuiFiltered.push(entry);
+
+      let tuiOutputStr: string;
+      if (tuiRaw && /\"plugin\"\s*:/.test(tuiRaw)) {
+        tuiOutputStr = splicePluginArray(tuiRaw, tuiFiltered);
+      } else {
+        tuiConfig.plugin = tuiFiltered;
+        tuiOutputStr = JSON.stringify(tuiConfig, null, 2) + "\n";
+      }
+
+      if (!dryRun) writeFileSync(tuiPath, tuiOutputStr);
+      const tuiLabel = tuiHadCaveopen ? "updated" : "registered";
+      printOk(
+        `${colorLabel(tuiLabel, isTTY)}  ${g("plugin")} caveopen → ${g(scope + ":tui")} plugin`,
+      );
+    } catch (e) {
+      printWarn(`tui config: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   // ── Active modules ────────────────────────────────────────────────
   const activeMods = new Set<string>(
     modes ?
@@ -504,6 +545,7 @@ function runCLI(): void {
   console.log("caveopen configured");
   console.log(`  Modes:  ${activeModes}`);
   console.log(`  Config: ${jsonPath}`);
+  if (tuiPath) console.log(`  TUI:    ${tuiPath}`);
   console.log(`  Run:    opencode`);
 }
 
