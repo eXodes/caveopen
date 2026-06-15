@@ -5,17 +5,11 @@ import { aggregateHistory, parseHistory } from "../lib/history.js";
 import { formatHistory, formatStats } from "../lib/stats.js";
 import { getSessionTokens } from "../lib/tokens.js";
 
-const executedKeys = new Set<string>();
-
 export function commandExecuteBeforeHook(
   ctx: PluginInput,
 ): NonNullable<Hooks["command.execute.before"]> {
   return async (input, output) => {
     if (input.command !== "caveman-stats") return;
-
-    const key = `${input.sessionID}:${input.command}`;
-    if (executedKeys.has(key)) return;
-    executedKeys.add(key);
 
     const args = input.arguments ?? "";
     const showAll = args.includes("--all");

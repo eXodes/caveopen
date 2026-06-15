@@ -4,17 +4,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 
-const executedKeys = new Set<string>();
-
 export function commandExecuteBeforeHook(
   ctx: PluginInput,
 ): NonNullable<Hooks["command.execute.before"]> {
   return async (input, output) => {
     if (input.command !== "ck:init") return;
-
-    const key = `${input.sessionID}:${input.command}`;
-    if (executedKeys.has(key)) return;
-    executedKeys.add(key);
 
     const destFormat = path.join(process.cwd(), "FORMAT.md");
 

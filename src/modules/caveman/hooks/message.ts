@@ -50,16 +50,10 @@ function extractTextFromParts(parts: Part[]): string {
     .join(" ");
 }
 
-const executedKeys = new Set<string>();
-
 export function chatMessageHook(
   ctx: PluginInput,
 ): NonNullable<Hooks["chat.message"]> {
   return async (input, output) => {
-    const key = `${input.sessionID}:${output.message.id}`;
-    if (executedKeys.has(key)) return;
-    executedKeys.add(key);
-
     const text = extractTextFromParts(output.parts);
     const prompt = text.toLowerCase().trim();
 
