@@ -5,6 +5,7 @@ import {
   systemTransformHook,
 } from "./hooks/session-init.js";
 import { handleFileWatcherUpdated } from "./hooks/file-watcher.js";
+import { setConfig } from "./hooks/set-config.js";
 
 export function cavekitHooks(ctx: PluginInput): Hooks {
   return {
@@ -14,6 +15,7 @@ export function cavekitHooks(ctx: PluginInput): Hooks {
       await handleSessionCreated(event, ctx);
       await handleFileWatcherUpdated(event, ctx);
     },
+    "config": setConfig(ctx),
   };
 }
 
