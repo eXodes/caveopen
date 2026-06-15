@@ -10,7 +10,7 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 | Claude Code hook / command           | Role                                        | OpenCode equivalent                                                 |
 | ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------- |
-| `/ck:init` (UserPromptSubmit detect) | Copy `FORMAT.md` to project root            | `command.execute.before`                                            |
+| `/ck:init` (UserPromptSubmit detect) | Ensure `FORMAT.md` at project root          | `command.execute.before`                                            |
 | `/ck:spec`, `/ck:build`, `/ck:check` | Skill invocations (skill-level, not hooks)  | Skills read `FORMAT.md` from project root — no hook needed          |
 | SPEC.md presence at session start    | Inject spec context into system prompt      | `session.created` event + `experimental.chat.system.transform`      |
 | SPEC.md file change during session   | Keep injected context stable (cache safety) | `file.watcher.updated` → update session cache for NEXT session only |
@@ -21,16 +21,7 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 **What it does:**
 
-`/ck:init` bootstraps a project for spec-driven development by copying the plugin-bundled `FORMAT.md` into the correct location so `ck:spec`, `ck:build`, and `ck:check` skills can reference it.
-
-**Scope resolution:**
-
-| Flag                     | Source                    | Destination                                                                              |
-| ------------------------ | ------------------------- | ---------------------------------------------------------------------------------------- |
-| _(none — project scope)_ | Plugin bundle `FORMAT.md` | `./.opencode/plugins/caveopen/FORMAT.md` → copy to `./FORMAT.md`                         |
-| `--global`               | Plugin bundle `FORMAT.md` | `~/.config/opencode/plugins/caveopen/FORMAT.md` → copy to `~/.config/opencode/FORMAT.md` |
-
-Skills (`ck:spec` etc.) look for `FORMAT.md` at project root (`./FORMAT.md`) first, then fall back to global (`~/.config/opencode/FORMAT.md`). This matches the plugin load order in PLUGINS.md.
+Ensures `FORMAT.md` exists at project root. No args. CLI install already handles the global case — this hook only concerns the current project.
 
 **Implementation:**
 
@@ -38,34 +29,25 @@ Skills (`ck:spec` etc.) look for `FORMAT.md` at project root (`./FORMAT.md`) fir
 "command.execute.before": async (input, output) => {
   if (input.command !== "ck-init") return;
 
-  const isGlobal = input.arguments?.includes("--global");
+  const destFormat = path.join(process.cwd(), "FORMAT.md");
 
-  // Resolve plugin bundle path at runtime (works for both install locations)
-  const pluginDir = path.dirname(fileURLToPath(import.meta.url));
-  const sourceFormat = path.join(pluginDir, "../../FORMAT.md");
-
-  const destFormat = isGlobal
-    ? path.join(os.homedir(), ".config", "opencode", "FORMAT.md")
-    : path.join(process.cwd(), "FORMAT.md");
-
-  const alreadyExists = existsSync(destFormat);
-  if (alreadyExists && !input.arguments?.includes("--force")) {
+  if (existsSync(destFormat)) {
     output.parts.push({
       type: "text",
-      text: `FORMAT.md already exists at ${destFormat}. Use --force to overwrite.`,
+      text: `FORMAT.md already exists at ${destFormat}.`,
     });
     return;
   }
+
+  // Resolve plugin bundle path at runtime
+  const pluginDir = path.dirname(fileURLToPath(import.meta.url));
+  const sourceFormat = path.join(pluginDir, "../../FORMAT.md");
 
   await fs.copyFile(sourceFormat, destFormat);
 
   output.parts.push({
     type: "text",
-    text: [
-      `FORMAT.md copied to ${destFormat}`,
-      `Scope: ${isGlobal ? "global" : "project"}`,
-      `Next: run /ck:spec to create SPEC.md`,
-    ].join("\n"),
+    text: `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`,
   });
 },
 ```
@@ -185,7 +167,6 @@ src/modules/cavekit/
     spec-context.ts          # session.created + experimental.chat.system.transform
     spec-watcher.ts          # file.watcher.updated: dirty flag, no mid-session re-inject
   lib/
-    format.ts                # resolveFormatSource(), resolveFormatDest(), copyFormat()
     spec.ts                  # readSpec(), extractSpecSummary() (pulls §G + §T)
     cache.ts                 # specContextCache Map, specDirtySet
 ```
@@ -263,16 +244,15 @@ export const CaveOpenPlugin: Plugin = async (ctx) =>
 ## Implementation Order
 
 1. `lib/cache.ts` — `specContextCache`, `specDirtySet`
-2. `lib/format.ts` — `resolveFormatSource()`, `resolveFormatDest()`, `copyFormat()`
-3. `lib/spec.ts` — `readSpec()`, `extractSpecSummary()` (regex pull of `§G` + `§T` block)
-4. `hooks/init.ts` — `command.execute.before` for `/ck:init`
-5. `hooks/spec-context.ts` — `session.created` load + `experimental.chat.system.transform` inject
-6. `hooks/spec-watcher.ts` — `file.watcher.updated` dirty flag
-7. `index.ts` — compose, export `cavekitHooks(ctx)`
-8. **Update `src/lib/merge-hooks.ts`** — implement `mergeHooks()` utility
-9. **Update `src/caveopen.ts`** — swap object spread for `mergeHooks()`
-10. Verify:
-    - `/ck:init` copies `FORMAT.md` to project root; `--global` copies to `~/.config/opencode/FORMAT.md`; `--force` overwrites; missing source returns clear error
+2. `lib/spec.ts` — `readSpec()`, `extractSpecSummary()` (regex pull of `§G` + `§T` block)
+3. `hooks/init.ts` — `command.execute.before` for `/ck:init`
+4. `hooks/spec-context.ts` — `session.created` load + `experimental.chat.system.transform` inject
+5. `hooks/spec-watcher.ts` — `file.watcher.updated` dirty flag
+6. `index.ts` — compose, export `cavekitHooks(ctx)`
+7. **Update `src/lib/merge-hooks.ts`** — implement `mergeHooks()` utility
+8. **Update `src/caveopen.ts`** — swap object spread for `mergeHooks()`
+9. Verify:
+    - `/ck:init` copies `FORMAT.md` to project root if absent; already-exists case returns early; missing source returns clear error
     - `SPEC.md` present → session system prompt contains `§G` line + `§T` table
     - Edit `SPEC.md` mid-session → system prompt unchanged this session, refreshes next
     - `mergeHooks()` runs all three modules' `session.created` handlers in order
