@@ -23,32 +23,37 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 Ensures `FORMAT.md` exists at project root. No args. CLI install already handles the global case — this hook only concerns the current project.
 
-**Implementation:**
+**Why NOT `output.parts`:** pushing to `output.parts` in `command.execute.before` prepends text to the next LLM user message — the LLM still sees the command and responds. The goal is to handle `/ck:init` entirely in the plugin with no LLM turn.
+
+**Pattern: `noReply: true` + `experimental.chat.messages.transform` command check**
+
+Two hooks in concert — no shared state needed:
+
+1. `command.execute.before` — copies file, calls `client.session.prompt({ noReply: true })` to display output without LLM inference.
+2. `experimental.chat.messages.transform` — inspects the last message's parts directly. If role is `"user"` and text is `"/ck:init"`, empties `output.messages` → LLM inference skipped entirely. No cross-hook flag needed.
+
+**`hooks/command.ts`:**
 
 ```ts
-"command.execute.before": async (input, output) => {
-  if (input.command !== "ck-init") return;
+await client.session.prompt({
+  path: { id: input.sessionID },
+  body: { noReply: true, parts: [{ type: "text", text }] },
+});
+```
 
-  const destFormat = path.join(process.cwd(), "FORMAT.md");
+**`hooks/messages-transform.ts`:**
 
-  if (existsSync(destFormat)) {
-    output.parts.push({
-      type: "text",
-      text: `FORMAT.md already exists at ${destFormat}.`,
-    });
-    return;
-  }
+```ts
+"experimental.chat.messages.transform": async (_input, output) => {
+  const last = output.messages.at(-1);
+  if (!last || last.info.role !== "user") return;
 
-  // Resolve plugin bundle path at runtime
-  const pluginDir = path.dirname(fileURLToPath(import.meta.url));
-  const sourceFormat = path.join(pluginDir, "../../FORMAT.md");
+  const isInit = last.parts.some(
+    (p) => p.type === "text" && (p as TextPart).text.trim() === "/ck:init",
+  );
+  if (!isInit) return;
 
-  await fs.copyFile(sourceFormat, destFormat);
-
-  output.parts.push({
-    type: "text",
-    text: `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`,
-  });
+  output.messages = []; // drop /ck:init → no LLM inference
 },
 ```
 
@@ -146,7 +151,7 @@ event: async ({ event }) => {
 | SPEC.md summary (`§G` + `§T`) | `experimental.chat.system.transform`      | Fixed per session → lands in `system[1]` → cached by `applyCaching()` | ✅ Cached turn 2+, zero thrash             |
 | FORMAT.md copy (file write)   | `command.execute.before` → `fs.copyFile`  | No model context mutation                                             | ✅ No cache impact                         |
 | SPEC.md change mid-session    | `file.watcher.updated` → dirty flag only  | Cache string NOT updated mid-session; stable until next session       | ✅ No cache bust                           |
-| `/ck:init` output             | `command.execute.before` → `output.parts` | One-shot confirmation text, same as caveman `/caveman-stats` pattern  | ✅ No repeat                               |
+| `/ck:init` output             | `command.execute.before` → `noReply: true` + flag; `experimental.chat.messages.transform` → empty messages | Output shown via noReply; messages emptied → no LLM inference | ✅ No LLM turn, no cache impact |
 
 **Key rules (from CACHING.md):**
 
@@ -161,14 +166,15 @@ event: async ({ event }) => {
 
 ```
 src/modules/cavekit/
-  index.ts                   # cavekitHooks(ctx) factory — composes all hooks
+  index.ts                      # cavekitHooks(ctx) factory — composes all hooks
   hooks/
-    init.ts                  # command.execute.before: /ck:init copy FORMAT.md
-    spec-context.ts          # session.created + experimental.chat.system.transform
-    spec-watcher.ts          # file.watcher.updated: dirty flag, no mid-session re-inject
+    command.ts                  # command.execute.before: /ck:init copy FORMAT.md + noReply + flag
+    messages-transform.ts       # experimental.chat.messages.transform: empty messages if flagged
+    session-init.ts             # session.created + experimental.chat.system.transform
+    file-watcher.ts             # file.watcher.updated: dirty flag, no mid-session re-inject
   lib/
-    spec.ts                  # readSpec(), extractSpecSummary() (pulls §G + §T)
-    cache.ts                 # specContextCache Map, specDirtySet
+    spec.ts                     # readSpec(), extractSpecSummary() (pulls §G + §T)
+    cache.ts                    # specContextCache Map, specDirtySet
 ```
 
 **Composition in `src/caveopen.ts`:**

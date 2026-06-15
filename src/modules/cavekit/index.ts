@@ -6,11 +6,13 @@ import {
 } from "./hooks/session-init.js";
 import { handleFileWatcherUpdated } from "./hooks/file-watcher.js";
 import { setConfig } from "./hooks/set-config.js";
+import { messagesTransformHook } from "./hooks/messages-transform.js";
 
 export function cavekitHooks(ctx: PluginInput): Hooks {
   return {
     "command.execute.before": commandExecuteBeforeHook(ctx),
     "experimental.chat.system.transform": systemTransformHook(ctx),
+    "experimental.chat.messages.transform": messagesTransformHook(ctx),
     "event": async ({ event }) => {
       await handleSessionCreated(event, ctx);
       await handleFileWatcherUpdated(event, ctx);
