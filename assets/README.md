@@ -24,9 +24,9 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 | `/ck:init`                                         | Copy FORMAT.md to project root           |
 | `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend SPEC.md                  |
 | `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks                     |
-| `/ck:check`                                        | Drift-detect SPEC.md vs code (read-only) |
-| `/ck:audit`                                        | Full codebase audit against spec         |
-| `/ck:eval`                                         | Evaluate spec coverage and quality       |
+| `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect SPEC.md vs code (read-only) |
+| `/ck:audit [--trim]`                               | Full codebase audit against spec         |
+| `/ck:eval [§T.n\|--diff]`                          | Evaluate spec coverage and quality       |
 
 ---
 
