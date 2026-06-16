@@ -1,9 +1,10 @@
 # caveopen
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-blue?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![OpenCode](https://img.shields.io/badge/OpenCode-plugin-8b5cf6)](https://opencode.ai/docs/plugins)
-[![Made with Cowork](https://img.shields.io/badge/Made%20with-Cowork-D97706?logo=anthropic&logoColor=white)](https://claude.ai)
+[![OpenCode](https://img.shields.io/badge/OpenCode-plugin-8b5cf6?logo=opencode&logoColor=white)](https://opencode.ai/docs/plugins)
+[![Made with Cowork](https://img.shields.io/badge/Made%20with-Cowork-D97706?logo=claude&logoColor=white)](https://claude.ai)
+[![npm version](https://img.shields.io/npm/v/caveopen?logo=npm&logoColor=white)](https://www.npmjs.com/package/caveopen)
+[![CI](https://img.shields.io/github/actions/workflow/status/eXodes/caveopen/ci.yml?label=CI&logo=github&logoColor=white)](https://github.com/eXodes/caveopen/actions)
+![NPM License](https://img.shields.io/npm/l/caveopen?color=red&logo=license)
 
 **caveopen** is an [OpenCode](https://opencode.ai) plugin that brings the [caveman ecosystem](https://github.com/JuliusBrussee/caveman) to OpenCode users. It ports three Claude Code tools — **[caveman](https://github.com/JuliusBrussee/caveman)**, **[cavekit](https://github.com/JuliusBrussee/cavekit)**, and **[cavemem](https://github.com/JuliusBrussee/cavemem)** — into a single TypeScript plugin that integrates natively with OpenCode's hook system.
 
