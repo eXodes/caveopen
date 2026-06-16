@@ -69,7 +69,8 @@ export function chatMessageHook(
     }
 
     if (isActivationPhrase(prompt)) {
-      writeModeFlag(readConfig().defaultMode);
+      const defMode = readConfig().defaultMode;
+      if (defMode !== "off") writeModeFlag(defMode);
     }
 
     const activeMode = readModeFlag();

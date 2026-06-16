@@ -23,23 +23,27 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 Ensures `FORMAT.md` exists at project root. No args. CLI install already handles the global case — this hook only concerns the current project.
 
-**Why NOT `output.parts`:** pushing to `output.parts` in `command.execute.before` prepends text to the next LLM user message — the LLM still sees the command and responds. The goal is to handle `/ck:init` entirely in the plugin with no LLM turn.
-
-**Pattern: `noReply: true` + `experimental.chat.messages.transform` command check**
+**Pattern: mutate `output.parts` with `ignored: true` + `experimental.chat.messages.transform` command check**
 
 Two hooks in concert — no shared state needed:
 
-1. `command.execute.before` — copies file, calls `client.session.prompt({ noReply: true })` to display output without LLM inference.
-2. `experimental.chat.messages.transform` — inspects the last message's parts directly. If role is `"user"` and text is `"/ck:init"`, empties `output.messages` → LLM inference skipped entirely. No cross-hook flag needed.
+1. `command.execute.before` — copies file, replaces `output.parts` with a single `{ type: "text", ignored: true }` part containing the result message. This surfaces output in the TUI without LLM inference.
+2. `experimental.chat.messages.transform` — if the last user message text is `/ck:init`, empties `output.messages` → LLM inference skipped entirely.
 
 **`hooks/command.ts`:**
 
 ```ts
-await client.session.prompt({
-  path: { id: input.sessionID },
-  body: { noReply: true, parts: [{ type: "text", text }] },
+output.parts.splice(0, output.parts.length, {
+  id: output.parts[0].id,
+  messageID: output.parts[0].messageID,
+  sessionID: input.sessionID,
+  type: "text",
+  text,          // "FORMAT.md copied to ..." or "FORMAT.md already exists at ..."
+  ignored: true,
 });
 ```
+
+Source path: `path.join(__dirname, "../assets/FORMAT.md")` — bundled alongside the plugin.
 
 **`hooks/messages-transform.ts`:**
 
@@ -151,7 +155,7 @@ event: async ({ event }) => {
 | SPEC.md summary (`§G` + `§T`) | `experimental.chat.system.transform`      | Fixed per session → lands in `system[1]` → cached by `applyCaching()` | ✅ Cached turn 2+, zero thrash             |
 | FORMAT.md copy (file write)   | `command.execute.before` → `fs.copyFile`  | No model context mutation                                             | ✅ No cache impact                         |
 | SPEC.md change mid-session    | `file.watcher.updated` → dirty flag only  | Cache string NOT updated mid-session; stable until next session       | ✅ No cache bust                           |
-| `/ck:init` output             | `command.execute.before` → `noReply: true` + flag; `experimental.chat.messages.transform` → empty messages | Output shown via noReply; messages emptied → no LLM inference | ✅ No LLM turn, no cache impact |
+| `/ck:init` output             | `command.execute.before` → `output.parts.splice(ignored: true)`; `experimental.chat.messages.transform` → empty messages | Output shown via ignored part; messages emptied → no LLM inference | ✅ No LLM turn, no cache impact |
 
 **Key rules (from CACHING.md):**
 
@@ -168,39 +172,53 @@ event: async ({ event }) => {
 src/modules/cavekit/
   index.ts                      # cavekitHooks(ctx) factory — composes all hooks
   hooks/
-    command.ts                  # command.execute.before: /ck:init copy FORMAT.md + noReply + flag
-    messages-transform.ts       # experimental.chat.messages.transform: empty messages if flagged
+    command.ts                  # command.execute.before: /ck:init copy FORMAT.md + noReply
+    messages-transform.ts       # experimental.chat.messages.transform: drop /ck:init turn
     session-init.ts             # session.created + experimental.chat.system.transform
     file-watcher.ts             # file.watcher.updated: dirty flag, no mid-session re-inject
+    set-config.ts               # config hook: registers /ck:init as named slash command
   lib/
     spec.ts                     # readSpec(), extractSpecSummary() (pulls §G + §T)
     cache.ts                    # specContextCache Map, specDirtySet
 ```
 
-**Composition in `src/caveopen.ts`:**
-
-```ts
-export const CaveOpenPlugin: Plugin = async (ctx) => ({
-  ...cavemanHooks(ctx),
-  ...caveMemHooks(ctx),
-  ...cavekitHooks(ctx), // ← new
-});
-```
+**Composition in `src/caveopen.ts`:** see CAVEMAN_HOOKS.md — `mergeHooks(cavemanHooks, caveMemHooks, cavekitHooks)` with optional `modes` selection.
 
 **Module entry:**
 
 ```ts
 // src/modules/cavekit/index.ts
-import type { PluginContext, Hooks } from "@opencode-ai/plugin";
-import { initHook } from "./hooks/init.js";
-import { specContextHooks } from "./hooks/spec-context.js";
-import { specWatcherHook } from "./hooks/spec-watcher.js";
+import type { PluginInput, Hooks } from "@opencode-ai/plugin";
+import { commandExecuteBeforeHook } from "./hooks/command.js";
+import { handleSessionCreated, systemTransformHook } from "./hooks/session-init.js";
+import { handleFileWatcherUpdated } from "./hooks/file-watcher.js";
+import { setConfig } from "./hooks/set-config.js";
+import { messagesTransformHook } from "./hooks/messages-transform.js";
 
-export function cavekitHooks(ctx: PluginContext): Hooks {
+export function cavekitHooks(ctx: PluginInput): Hooks {
   return {
-    ...initHook(ctx),
-    ...specContextHooks(ctx),
-    ...specWatcherHook(ctx),
+    "command.execute.before": commandExecuteBeforeHook(ctx),
+    "experimental.chat.system.transform": systemTransformHook(ctx),
+    "experimental.chat.messages.transform": messagesTransformHook(ctx),
+    "event": async ({ event }) => {
+      await handleSessionCreated(event, ctx);
+      await handleFileWatcherUpdated(event, ctx);
+    },
+    "config": setConfig(ctx),
+  };
+}
+```
+
+**`config` hook** (`set-config.ts`) registers `/ck:init` as a named slash command with description. This makes it appear in the TUI command palette:
+
+```ts
+config: async (config) => {
+  config.command = {
+    ...config.command,
+    "ck:init": {
+      template: "/ck:init",
+      description: "Copy FORMAT.md (the SPEC.md schema) to the current project root",
+    },
   };
 }
 ```
@@ -247,18 +265,10 @@ export const CaveOpenPlugin: Plugin = async (ctx) =>
 
 ---
 
-## Implementation Order
+## Verify Checklist
 
-1. `lib/cache.ts` — `specContextCache`, `specDirtySet`
-2. `lib/spec.ts` — `readSpec()`, `extractSpecSummary()` (regex pull of `§G` + `§T` block)
-3. `hooks/init.ts` — `command.execute.before` for `/ck:init`
-4. `hooks/spec-context.ts` — `session.created` load + `experimental.chat.system.transform` inject
-5. `hooks/spec-watcher.ts` — `file.watcher.updated` dirty flag
-6. `index.ts` — compose, export `cavekitHooks(ctx)`
-7. **Update `src/lib/merge-hooks.ts`** — implement `mergeHooks()` utility
-8. **Update `src/caveopen.ts`** — swap object spread for `mergeHooks()`
-9. Verify:
-    - `/ck:init` copies `FORMAT.md` to project root if absent; already-exists case returns early; missing source returns clear error
-    - `SPEC.md` present → session system prompt contains `§G` line + `§T` table
-    - Edit `SPEC.md` mid-session → system prompt unchanged this session, refreshes next
-    - `mergeHooks()` runs all three modules' `session.created` handlers in order
+- `/ck:init` copies `FORMAT.md` to project root if absent; already-exists case returns early; missing source returns clear error
+- `SPEC.md` present → session system prompt contains `§G` line + `§T` table
+- Edit `SPEC.md` mid-session → system prompt unchanged this session, refreshes next
+- `mergeHooks()` runs all three modules' `session.created` handlers in order
+- `/ck:init` appears in TUI command palette (registered via `config` hook)

@@ -8,9 +8,7 @@ export async function handleFileWatcherUpdated(
 ): Promise<void> {
   if (event.type !== "file.watcher.updated") return;
 
-  const changedPath =
-    (event.properties as unknown as Record<string, string> | undefined)?.path ??
-    "";
+  const changedPath = event.properties.file;
   if (!changedPath.endsWith("SPEC.md")) return;
 
   for (const id of allSessionIDs()) {

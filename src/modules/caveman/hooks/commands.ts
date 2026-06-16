@@ -1,6 +1,6 @@
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
-import type { Part } from "@opencode-ai/sdk";
 import { HISTORY_PATH, readModeFlag } from "../lib/config.js";
+import { messageId, partId } from "../../../lib/cuid.js";
 import { aggregateHistory, parseHistory } from "../lib/history.js";
 import { formatHistory, formatStats } from "../lib/stats.js";
 import { getSessionTokens } from "../lib/tokens.js";
@@ -38,8 +38,11 @@ export function commandExecuteBeforeHook(
     }
 
     output.parts.push({
+      id: partId(),
+      sessionID: input.sessionID,
+      messageID: messageId(),
       type: "text",
       text: parts.filter(Boolean).join("\n\n"),
-    } as unknown as Part);
+    });
   };
 }

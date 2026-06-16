@@ -19,10 +19,14 @@ export async function getSessionTokens(
   }
 
   const items = messages.data ?? [];
-  const totals: SessionTokens = { input: 0, output: 0, cache: { read: 0, write: 0 } };
+  const totals: SessionTokens = {
+    input: 0,
+    output: 0,
+    cache: { read: 0, write: 0 },
+  };
 
   for (const item of items) {
-    const msg = item.info as Message;
+    const msg = item.info;
     if (msg.role !== "assistant") continue;
     const t = msg.tokens;
     totals.input += t.input;

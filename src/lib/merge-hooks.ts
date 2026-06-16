@@ -20,5 +20,5 @@ export function mergeHooks(...hookSets: Partial<Hooks>[]): Hooks {
     };
   }
 
-  return result as unknown as Hooks;
+  return result as Hooks;
 }

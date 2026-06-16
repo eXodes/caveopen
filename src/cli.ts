@@ -255,14 +255,16 @@ function runCLI(): void {
   }
 
   if (!Array.isArray(config.plugin)) config.plugin = [];
+  const pluginsRaw = config.plugin;
+  if (!Array.isArray(pluginsRaw)) throw new Error("internal: plugin not array");
 
   // Track pre-existing caveopen entry for ADDED|MODIFIED state
-  const hadCaveopen = (config.plugin as unknown[]).some(
+  const hadCaveopen = pluginsRaw.some(
     (e) => e === "caveopen" || (Array.isArray(e) && e[0] === "caveopen"),
   );
 
   // npm-form — "caveopen" or ["caveopen", {"modes":"..."}]; idempotent
-  const filtered = (config.plugin as unknown[]).filter(
+  const filtered = pluginsRaw.filter(
     (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
   );
   const modesArray =
@@ -345,11 +347,11 @@ function runCLI(): void {
   //     const tuiConfig = parseJsonc(tuiRaw);
   //     if (!Array.isArray(tuiConfig.plugin)) tuiConfig.plugin = [];
 
-  //     const tuiHadCaveopen = (tuiConfig.plugin as unknown[]).some(
+  //     const tuiHadCaveopen = (tuiConfig.plugin[]).some(
   //       (e) => e === "caveopen" || (Array.isArray(e) && e[0] === "caveopen"),
   //     );
 
-  //     const tuiFiltered = (tuiConfig.plugin as unknown[]).filter(
+  //     const tuiFiltered = (tuiConfig.plugin[]).filter(
   //       (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
   //     );
   //     tuiFiltered.push(entry);

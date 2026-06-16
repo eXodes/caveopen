@@ -24,7 +24,7 @@ export async function handleSessionCreated(
 ): Promise<void> {
   if (event.type !== "session.created") return;
   const { defaultMode } = readConfig();
-  if ((defaultMode as string) === "off") {
+  if (defaultMode === "off") {
     removeModeFlag();
     return;
   }

@@ -13,9 +13,7 @@ export async function handleSessionCreated(
 ): Promise<void> {
   if (event.type !== "session.created") return;
 
-  const sessionID = (
-    event.properties as unknown as Record<string, string> | undefined
-  )?.sessionID;
+  const sessionID = event.properties.info.id;
   if (!sessionID) return;
 
   if (hasSession(sessionID)) return;
@@ -33,9 +31,7 @@ export function systemTransformHook(
   ctx: PluginInput,
 ): NonNullable<Hooks["experimental.chat.system.transform"]> {
   return async (input, output) => {
-    const sessionID = (input as Record<string, unknown>)["sessionID"] as
-      | string
-      | undefined;
+    const sessionID = input["sessionID"];
     if (!sessionID) return;
 
     const context = getCachedContext(sessionID);

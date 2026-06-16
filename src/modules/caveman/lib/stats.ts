@@ -45,9 +45,9 @@ export function derivesSavings({ outputTokens, mode, model }: SavingsInput): {
   const ratio = SAVINGS_RATIO[mode] ?? 0;
   const estSavedTokens = Math.round(outputTokens * ratio);
   const costPer1k =
-    model && OUTPUT_TOKEN_COST_PER_1K[model]
-      ? OUTPUT_TOKEN_COST_PER_1K[model]!
-      : DEFAULT_COST_PER_1K;
+    model && OUTPUT_TOKEN_COST_PER_1K[model] ?
+      OUTPUT_TOKEN_COST_PER_1K[model]!
+    : DEFAULT_COST_PER_1K;
   const estSavedUsd = (estSavedTokens / 1000) * costPer1k;
 
   return { estSavedTokens, estSavedUsd };
@@ -59,8 +59,9 @@ export function formatStats({ tokens, mode, sessionID }: StatsInput): string {
   const cacheWrite = tokens?.cache?.write ?? 0;
   const input = tokens?.input ?? 0;
 
-  const { estSavedTokens, estSavedUsd } = mode
-    ? derivesSavings({ outputTokens: out, mode, model: null })
+  const { estSavedTokens, estSavedUsd } =
+    mode ?
+      derivesSavings({ outputTokens: out, mode, model: null })
     : { estSavedTokens: 0, estSavedUsd: 0 };
 
   return [

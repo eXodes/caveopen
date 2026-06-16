@@ -9,9 +9,7 @@ export async function handleSessionDeleted(
 ): Promise<void> {
   if (event.type !== "session.deleted") return;
 
-  const sessionID = (
-    event.properties as unknown as Record<string, string> | undefined
-  )?.sessionID;
+  const sessionID = event.properties.info.id;
   if (!sessionID) return;
 
   await runCavememHook("session-end", { session_id: sessionID });

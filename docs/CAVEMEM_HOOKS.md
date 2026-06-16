@@ -12,18 +12,36 @@ Invoke the installed `cavemem` CLI via `cavemem hook run <name>`. No `@cavemem/*
 echo '<json>' | cavemem hook run <hook-name>
 ```
 
-Use `Bun.spawn` when available (OpenCode's runtime); fallback to Node's `child_process.spawn`:
+Uses `node:child_process.spawn` (no Bun path — OpenCode runs plugins via Bun but the plugin itself uses the Node-compatible spawn API):
 
 ```ts
-async function runCavememHook(
+import { spawn } from "node:child_process";
+
+function spawnNode(name: string, json: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("cavemem", ["hook", "run", name], {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let out = "";
+    proc.stdout.on("data", (chunk: Buffer) => { out += chunk.toString(); });
+    proc.on("close", () => resolve(out));
+    proc.on("error", reject);
+    proc.stdin.write(json);
+    proc.stdin.end();
+  });
+}
+
+export async function runCavememHook(
   name: string,
   payload: object,
 ): Promise<string | null> {
   const json = JSON.stringify(payload);
-  const text =
-    typeof Bun !== "undefined" ?
-      await spawnBun(name, json)
-    : await spawnNode(name, json);
+  let text: string;
+  try {
+    text = await spawnNode(name, json);
+  } catch {
+    return null;
+  }
   if (!text.trim()) return null;
   try {
     const parsed = JSON.parse(text);
@@ -31,36 +49,6 @@ async function runCavememHook(
   } catch {
     return null;
   }
-}
-
-async function spawnBun(name: string, json: string): Promise<string> {
-  const proc = Bun.spawn(["cavemem", "hook", "run", name], {
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  proc.stdin.write(json);
-  proc.stdin.end();
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  return text;
-}
-
-function spawnNode(name: string, json: string): Promise<string> {
-  const { spawn } = require("child_process") as typeof import("child_process");
-  return new Promise((resolve, reject) => {
-    const proc = spawn("cavemem", ["hook", "run", name], {
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    let out = "";
-    proc.stdout.on("data", (chunk: Buffer) => {
-      out += chunk.toString();
-    });
-    proc.on("close", () => resolve(out));
-    proc.on("error", reject);
-    proc.stdin.write(json);
-    proc.stdin.end();
-  });
 }
 ```
 
@@ -158,16 +146,17 @@ Pure write path. `additionalContext` is always empty — retrieval is MCP-driven
 
 ## Hook 4 — Turn Summary (`session.idle` → `stop`)
 
-`session.idle` fires with no message payload. Fetch the last assistant message via SDK first:
+`session.idle` fires with no message payload. Fetch the last assistant message via `getLastAssistantText()` from `lib/text.ts`, which calls `client.session.messages()` and scans in reverse for the last assistant message with non-empty text parts:
 
 ```ts
-event: async ({ event, client }) => {
+event: async ({ event }) => {
   if (event.type !== "session.idle") return;
-  const sessionID = event.properties.sessionID;
-  const messages = await client.message.list(sessionID);
-  const last = [...messages].reverse().find((m) => m.role === "assistant");
-  const text = extractAssistantText(last);
+  const sessionID = event.properties?.sessionID;
+  if (!sessionID) return;
+
+  const text = await getLastAssistantText(ctx.client, sessionID);
   if (!text?.trim()) return;
+
   await runCavememHook("stop", {
     session_id: sessionID,
     last_assistant_message: text,
@@ -177,27 +166,27 @@ event: async ({ event, client }) => {
 
 **Gap vs official installer:** The official OpenCode installer calls `stop` with only `{ session_id, ide }` — no `last_assistant_message`. The handler returns early, so turn summaries are never written. CaveOpen fixes this with the SDK fetch before the `cavemem hook run stop` call.
 
+**Note:** `client.message.list()` does not exist on the SDK client. The correct call is `client.session.messages({ path: { id: sessionID } })`, which is what `getLastAssistantText()` uses internally.
+
 ---
 
 ## Hook 5 — Session Rollup (`session.deleted` → `session-end`)
 
 ```ts
-// On session deleted
 event: async ({ event }) => {
   if (event.type !== "session.deleted") return;
-  await runCavememHook("session-end", {
-    session_id: event.properties.sessionID,
-  });
-};
 
-// On server shutdown — flush any session still in memory
-dispose: async () => {
-  // session-end already closed the store; nothing extra needed here
-  // unless a session was active without session.deleted firing
+  const sessionID = event.properties.info.id; // note: .info.id not .sessionID
+  if (!sessionID) return;
+
+  await runCavememHook("session-end", { session_id: sessionID });
+  deleteCachedContext(sessionID); // evict from in-process session-cache
 };
 ```
 
-The handler rolls up all `scope: 'turn'` summaries into a `scope: 'session'` summary, then calls `store.endSession`.
+**`event.properties.info.id`** — `session.deleted` event shape differs from `session.idle`: it carries `{ info: { id, ... } }` not `{ sessionID }`. No `dispose` hook — `session.deleted` fires reliably before server shutdown.
+
+The handler rolls up all `scope: 'turn'` summaries into a `scope: 'session'` summary.
 
 ---
 
@@ -209,7 +198,7 @@ The handler rolls up all `scope: 'turn'` summaries into a `scope: 'session'` sum
 | User prompt observation | `chat.message` (write only)          | No model context mutation                           |
 | Tool observation        | `tool.execute.after` (write only)    | No model context mutation                           |
 | Turn summary            | `session.idle` (write only)          | No model context mutation                           |
-| Session rollup          | `session.deleted` (write only)       | No model context mutation                           |
+| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                      |
 
 Prior-session context string is immutable after `session.created`. Never re-fetch or mutate mid-session.
 

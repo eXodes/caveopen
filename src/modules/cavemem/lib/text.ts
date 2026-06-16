@@ -29,9 +29,9 @@ export async function getLastAssistantText(
 
   const items = (messages.data ?? []).slice().reverse();
   for (const item of items) {
-    const msg = item.info as Message;
+    const msg = item.info;
     if (msg.role !== "assistant") continue;
-    const parts: Part[] = (item as Record<string, unknown>)["parts"] as Part[] ?? [];
+    const parts: Part[] = item["parts"] ?? [];
     const text = extractText(parts);
     if (text.trim()) return text;
   }

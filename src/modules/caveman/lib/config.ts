@@ -1,11 +1,20 @@
 import { homedir } from "node:os";
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 export const CAVEMAN_DIR = join(homedir(), ".caveman");
 export const MODE_FILE = join(CAVEMAN_DIR, ".caveman-active");
 export const HISTORY_PATH = join(CAVEMAN_DIR, ".caveman-history.jsonl");
-export const STATUSLINE_SUFFIX_FILE = join(CAVEMAN_DIR, ".caveman-statusline-suffix");
+export const STATUSLINE_SUFFIX_FILE = join(
+  CAVEMAN_DIR,
+  ".caveman-statusline-suffix",
+);
 
 export type CavemanMode =
   | "lite"
@@ -16,7 +25,7 @@ export type CavemanMode =
   | "wenyan-ultra";
 
 export type CavemanConfig = {
-  defaultMode: CavemanMode;
+  defaultMode: CavemanMode | "off";
 };
 
 const VALID_MODES = new Set<string>([

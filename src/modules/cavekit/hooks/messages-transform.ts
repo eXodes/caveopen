@@ -1,5 +1,4 @@
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
-import type { TextPart } from "@opencode-ai/sdk";
 
 export function messagesTransformHook(
   ctx: PluginInput,
@@ -9,7 +8,7 @@ export function messagesTransformHook(
     if (!last || last.info.role !== "user") return;
 
     const isInit = last.parts.some(
-      (p) => p.type === "text" && (p as TextPart).text.trim() === "/ck:init",
+      (p) => p.type === "text" && p.text.trim() === "/ck:init",
     );
 
     if (!isInit) return;

@@ -9,7 +9,7 @@ export async function handleSessionIdle(
 ): Promise<void> {
   if (event.type !== "session.idle") return;
 
-  const sessionID = (event.properties as unknown as Record<string, string> | undefined)?.sessionID;
+  const sessionID = event.properties.sessionID;
   if (!sessionID) return;
 
   const text = await getLastAssistantText(ctx.client, sessionID);

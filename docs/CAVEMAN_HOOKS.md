@@ -88,13 +88,14 @@ event: async ({ event }) => {
 
 ```ts
 "chat.message": async (input, output) => {
-  const text = extractText(output.message); // pull plain text from message parts
+  const text = extractTextFromParts(output.parts);
   const prompt = text.toLowerCase().trim();
 
-  // Natural language activation
-  if (isActivationPhrase(prompt) && !isDeactivationPhrase(prompt)) {
-    const mode = readConfig().defaultMode ?? "full";
-    if (mode !== "off") writeModeFlag(mode);
+  // Mode switch: /caveman lite|full|ultra|off — checked first, returns early
+  const modeSwitch = parseModeCommand(prompt);
+  if (modeSwitch !== null) {
+    modeSwitch === "off" ? removeModeFlag() : writeModeFlag(modeSwitch);
+    return;
   }
 
   // Natural language deactivation
@@ -103,25 +104,34 @@ event: async ({ event }) => {
     return;
   }
 
-  // Mode switch: /caveman lite|full|ultra
-  const modeSwitch = parseModeCommand(prompt);
-  if (modeSwitch !== null) {
-    modeSwitch === "off" ? removeModeFlag() : writeModeFlag(modeSwitch);
-    return;
+  // Natural language activation
+  if (isActivationPhrase(prompt)) {
+    const defMode = readConfig().defaultMode;
+    if (defMode !== "off") writeModeFlag(defMode);
   }
 
   // Per-turn reinforcement: keep caveman in model attention on every turn
   const activeMode = readModeFlag();
   if (activeMode && !INDEPENDENT_MODES.has(activeMode)) {
     output.parts.push({
+      id: partId(),
+      sessionID: input.sessionID,
+      messageID: output.message.id,
       type: "text",
       text: `CAVEMAN MODE ACTIVE (${activeMode}). Drop articles/filler/pleasantries/hedging. Fragments OK. Code/commits/security: write normal.`,
+      synthetic: true,
     });
   }
 },
 ```
 
-**Why per-turn reminder:** OpenCode context may compact. System prompt gets pruned before user messages. A short reinforcement string (< 30 tokens) in `output.parts` keeps caveman in the model's attention window without re-loading the full ruleset. Matches caveman's original design exactly.
+**Logic order:** mode switch (`/caveman <level>`) checked first so it exits before activation/deactivation phrase matching. Deactivation before activation to avoid conflict when both phrases appear.
+
+**`synthetic: true`** — marks the injected part as non-user-authored so OpenCode can distinguish it from real user input.
+
+**`output.message.id`** — use the existing message's ID, not a fresh one; `partId()` generates a unique part ID via cuid.
+
+**Why per-turn reminder:** OpenCode context may compact. System prompt gets pruned before user messages. A short reinforcement string (< 30 tokens) in `output.parts` keeps caveman in the model's attention window without re-loading the full ruleset.
 
 **Independent modes** (`commit`, `review`, `compress`): skip reinforcement — they have their own skill behavior.
 
@@ -141,19 +151,33 @@ event: async ({ event }) => {
 "command.execute.before": async (input, output) => {
   if (input.command !== "caveman-stats") return;
 
-  // Read current session stats via SDK
-  const session = await client.session.get({ path: { id: input.sessionID } });
-  const tokens = session.data?.info?.tokens;
+  const args = input.arguments ?? "";
+  const showAll = args.includes("--all");
+  const sinceMatch = args.match(/--since\s+(\d+)d/);
+  const sinceDays = sinceMatch ? parseInt(sinceMatch[1]!, 10) : undefined;
 
-  const mode = readModeFlag();
-  const statsText = formatStats({ tokens, mode, sessionID: input.sessionID });
+  const tokens = await getSessionTokens(ctx.client, input.sessionID);
+  const sessionStats = formatStats({ tokens, mode: readModeFlag(), sessionID: input.sessionID });
 
-  // Append stats as context — model sees it as pre-injected context, not AI output
-  output.parts.push({ type: "text", text: statsText });
+  const parts: string[] = [sessionStats];
+  if (showAll || sinceDays) {
+    const agg = aggregateHistory(parseHistory(HISTORY_PATH, sinceDays));
+    parts.push(formatHistory(agg));
+  }
+
+  output.parts.push({
+    id: partId(),
+    sessionID: input.sessionID,
+    messageID: messageId(),
+    type: "text",
+    text: parts.filter(Boolean).join("\n\n"),
+  });
 },
 ```
 
-**Note:** Claude Code's `/caveman-stats` uses `decision: "block"` + `reason` to return output without triggering the model. OpenCode's `command.execute.before` mutates `output.parts` to prepend context before the command runs — same effect.
+**Flags:** `--all` shows lifetime history; `--since Nd` filters to last N days (e.g. `--since 7d`). Both read `~/.caveman/.caveman-history.jsonl` via `parseHistory(HISTORY_PATH, sinceDays)`.
+
+**Part shape:** requires `id` (via `partId()`), `sessionID`, and `messageID` (via `messageId()`) — both from `src/lib/cuid.ts`.
 
 ---
 
@@ -163,38 +187,47 @@ event: async ({ event }) => {
 
 **The problem:** Claude Code reads token usage directly from session JSONL at `~/.claude/projects/`. OpenCode has no equivalent filesystem exposure — sessions are stored in a SQLite database (`opencode.db`).
 
-**Solution:** Write our own history on every `session.idle` event using token data from the OpenCode SDK.
+**Solution:** Write our own history on every `session.idle` event. Tokens are aggregated from `client.session.messages()` via `getSessionTokens()` in `lib/tokens.ts` — summing across all assistant messages in the session.
 
 ```ts
 event: async ({ event }) => {
   if (event.type !== "session.idle") return;
 
-  const sessionID = event.properties.sessionID;
-  const session = await client.session.get({ path: { id: sessionID } });
-  const info = session.data?.info;
-  if (!info?.tokens?.output) return; // no tokens yet
+  const sessionID = event.properties?.sessionID;
+  if (!sessionID) return;
+
+  const tokens = await getSessionTokens(ctx.client, sessionID);
+  if (!tokens) return; // no output tokens yet
 
   const mode = readModeFlag();
+  const model: string | null = null; // not exposed per-session by SDK
+
   const { estSavedTokens, estSavedUsd } = derivesSavings({
-    outputTokens: info.tokens.output,
+    outputTokens: tokens.output,
     mode,
-    model: info.model,
+    model,
   });
 
-  const entry = JSON.stringify({
-    ts: Date.now(),
-    session_id: sessionID,
-    mode: mode ?? null,
-    model: info.model ?? null,
-    output_tokens: info.tokens.output,
-    cache_read_tokens: info.tokens.cache?.read ?? 0,
-    est_saved_tokens: estSavedTokens,
-    est_saved_usd: estSavedUsd,
-  });
+  appendHistory(
+    HISTORY_PATH,
+    JSON.stringify({
+      ts: Date.now(),
+      session_id: sessionID,
+      mode: mode ?? null,
+      model,
+      output_tokens: tokens.output,
+      cache_read_tokens: tokens.cache.read,
+      est_saved_tokens: estSavedTokens,
+      est_saved_usd: estSavedUsd,
+    }),
+  );
 
-  appendHistory(HISTORY_PATH, entry); // ~/.caveman/.caveman-history.jsonl
+  const agg = aggregateHistory(parseHistory(HISTORY_PATH));
+  writeStatuslineSuffix(formatStatuslineSuffix(agg));
 },
 ```
+
+**`getSessionTokens()`** calls `client.session.messages()` and sums `tokens.{input,output,cache.read,cache.write}` across all assistant messages. Returns `null` if no output tokens yet. Model string is not exposed per-session by the SDK — stored as `null` in history.
 
 **History schema** (same as caveman, compatible with caveman-stats aggregation):
 
@@ -292,10 +325,13 @@ Caveman injects content at multiple points. Each must be safe for OpenCode's two
 ```
 caveopen/
   src/
-    caveopen.ts                     # Plugin entry — spreads module hooks, exports CaveOpenPlugin
+    caveopen.ts                     # Plugin entry — mergeHooks across modules, exports CaveOpenPlugin
+    lib/
+      merge-hooks.ts                # mergeHooks() utility — fan-in same-key hooks across modules
+      cuid.ts                       # cuid(), partId(), messageId() — unique ID generation (SHA3-512)
     modules/
       caveman/
-        index.ts                    # Module entry — composes all caveman hooks, exports cavemanHooks()
+        index.ts                    # Module entry — composes caveman hooks, exports cavemanHooks()
         hooks/
           activation.ts             # experimental.chat.system.transform + session.created
           message.ts                # chat.message: mode tracking + per-turn reinforcement
@@ -303,57 +339,65 @@ caveopen/
           history.ts                # session.idle: write ~/.caveman/.caveman-history.jsonl
           tui.ts                    # tui.prompt.append: compact status badge (TUI only)
         lib/
-          config.ts                 # readModeFlag, writeModeFlag, readConfig
+          config.ts                 # readModeFlag, writeModeFlag, readConfig, writeStatuslineSuffix
           history.ts                # appendHistory, aggregateHistory, parseHistory
-          stats.ts                  # formatStats, formatHistory, derivesSavings
+          stats.ts                  # formatStats, formatStatuslineSuffix, derivesSavings
           ruleset.ts                # buildRuleset: reads SKILL.md, filters by active level
+          tokens.ts                 # getSessionTokens: aggregates token counts from session messages
 ```
 
-**Module boundary:** `src/modules/caveman/index.ts` owns hook composition — imports all hooks, merges them, and exports a single `cavemanHooks(ctx)` factory. `src/caveopen.ts` calls it without knowing internals. Future modules (`cavemem`, `cavekit`) follow the same pattern.
+**Module boundary:** `src/modules/caveman/index.ts` owns hook composition — hooks are keyed directly (not spread) so same-key handlers from multiple modules stay separate until `mergeHooks` fans them in at `src/caveopen.ts`.
 
 ```ts
 // src/modules/caveman/index.ts
-import type { PluginContext, Hooks } from "@opencode-ai/plugin";
-import { activationHooks } from "./hooks/activation.js";
-import { messageHook } from "./hooks/message.js";
-import { commandHooks } from "./hooks/commands.js";
-import { historyHook } from "./hooks/history.js";
-import { tuiHook } from "./hooks/tui.js";
+import type { PluginInput, Hooks } from "@opencode-ai/plugin";
+import { systemTransformHook, handleSessionCreated } from "./hooks/activation.js";
+import { chatMessageHook } from "./hooks/message.js";
+import { handleSessionIdle } from "./hooks/history.js";
+import { commandExecuteBeforeHook } from "./hooks/commands.js";
+import { handleTuiEvents } from "./hooks/tui.js";
 
-export function cavemanHooks(ctx: PluginContext): Hooks {
+export function cavemanHooks(ctx: PluginInput): Hooks {
   return {
-    ...activationHooks(ctx),
-    ...messageHook(ctx),
-    ...commandHooks(ctx),
-    ...historyHook(ctx),
-    ...tuiHook(ctx),
+    "experimental.chat.system.transform": systemTransformHook(ctx),
+    "chat.message": chatMessageHook(ctx),
+    "command.execute.before": commandExecuteBeforeHook(ctx),
+    "event": async ({ event }) => {
+      await handleSessionCreated(event, ctx);
+      await handleSessionIdle(event, ctx);
+      await handleTuiEvents(event, ctx);
+    },
   };
 }
 ```
 
 ```ts
 // src/caveopen.ts
-import { cavemanHooks } from "./modules/caveman/index.js";
 import type { Plugin } from "@opencode-ai/plugin";
+import { cavemanHooks } from "./modules/caveman/index.js";
+import { cavekitHooks } from "./modules/cavekit/index.js";
+import { caveMemHooks } from "./modules/cavemem/index.js";
+import { mergeHooks } from "./lib/merge-hooks.js";
 
-export const CaveOpenPlugin: Plugin = async (ctx) => ({
-  ...cavemanHooks(ctx),
-  // future: ...cavememHooks(ctx), ...cavekitHooks(ctx)
-});
+export type CaveOpenMode = "caveman" | "cavekit" | "cavemem";
+
+const ALL_MODES: CaveOpenMode[] = ["caveman", "cavekit", "cavemem"];
+
+export const CaveOpenPlugin: Plugin = async (ctx, options) => {
+  const modes: CaveOpenMode[] = Array.isArray(options?.modes)
+    ? (options.modes as string[]).filter((m): m is CaveOpenMode =>
+        ALL_MODES.includes(m as CaveOpenMode)
+      )
+    : ALL_MODES;
+
+  const hookSets = [
+    modes.includes("caveman") && cavemanHooks(ctx),
+    modes.includes("cavemem") && caveMemHooks(ctx),
+    modes.includes("cavekit") && cavekitHooks(ctx),
+  ].filter(Boolean) as Parameters<typeof mergeHooks>;
+
+  return mergeHooks(...hookSets);
+};
 ```
 
----
-
-## Implementation Order
-
-1. **`modules/caveman/lib/config.ts`** — flag file read/write, mode validation, `~/.caveman/` init
-2. **`modules/caveman/lib/history.ts`** — JSONL append, aggregate, parse (port from `caveman-stats.js`)
-3. **`modules/caveman/lib/ruleset.ts`** — SKILL.md reader, level filter
-4. **`modules/caveman/hooks/activation.ts`** — system transform + session.created flag write
-5. **`modules/caveman/hooks/message.ts`** — chat.message mode tracking + per-turn reinforcement
-6. **`modules/caveman/hooks/history.ts`** — session.idle history write
-7. **`modules/caveman/hooks/commands.ts`** — command.execute.before for /caveman-stats
-8. **`modules/caveman/hooks/tui.ts`** — tui.prompt.append compact badge (TUI plugin)
-9. **`modules/caveman/index.ts`** — compose all hooks into `cavemanHooks(ctx)`
-10. **`src/caveopen.ts`** — spread `cavemanHooks(ctx)` into `CaveOpenPlugin`
-11. **Verify:** run `/caveman-stats`, check `~/.caveman/.caveman-history.jsonl`, confirm system prompt injection, confirm no cache thrash
+`options.modes` lets callers selectively enable modules, e.g. `{ modes: ["caveman"] }`. Defaults to all three.
