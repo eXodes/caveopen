@@ -134,7 +134,6 @@ Override model per-agent in `opencode.json`:
 │   ├── caveman-help.md
 │   ├── caveman-review.md
 │   ├── caveman-stats.md
-│   ├── ck:init.md
 │   ├── ck:spec.md
 │   ├── ck:build.md
 │   ├── ck:check.md
