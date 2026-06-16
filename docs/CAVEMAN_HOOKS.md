@@ -33,21 +33,13 @@ Caveman uses `$CLAUDE_CONFIG_DIR/` for all state. CaveOpen uses `~/.caveman/` �
 
 ---
 
-## Hook 1 — Session Activation (`session.created`)
+## Hook 1a — Ruleset Injection (`experimental.chat.system.transform`)
 
-**Claude Code source:** `caveman-activate.js`
+**Claude Code source:** `caveman-activate.js` (emit path)
 
-**What it does:**
-
-1. Reads configured default mode
-2. Writes `.caveman-active` flag
-3. Emits full caveman ruleset as hidden context
-4. Nudges statusline setup if not configured
-
-**OpenCode implementation:**
+**What it does:** Injects full caveman ruleset into `system[0]` before every inference.
 
 ```ts
-// Hook A: inject caveman rules into EVERY session's system prompt (cached)
 "experimental.chat.system.transform": async (input, output) => {
   const mode = readModeFlag();
   if (!mode || mode === "off") return;
@@ -58,8 +50,21 @@ Caveman uses `$CLAUDE_CONFIG_DIR/` for all state. CaveOpen uses `~/.caveman/` �
 },
 ```
 
+**Fires before every inference** — not just once at session start. This is the key difference from upstream, where `caveman-activate.js` emits the ruleset once via SessionStart context. Because transform fires on every inference, the ruleset is always present in `system[0]` regardless of context compaction.
+
+**Caching:** `system[0]` is always marked by `applyCaching()` (first 2 system messages). Full ruleset hits cache on every subsequent turn after the first. No repeat cost.
+
+**SKILL.md source:** Plugin reads `path.join(__dirname, "../skills/caveman/SKILL.md")` at runtime. Edits propagate automatically, no hardcoded duplication.
+
+---
+
+## Hook 1b — Flag Initialization (`session.created`)
+
+**Claude Code source:** `caveman-activate.js` (flag-write path)
+
+**What it does:** Writes `.caveman-active` to default mode on session start.
+
 ```ts
-// Hook B: write the active flag on session creation
 event: async ({ event }) => {
   if (event.type !== "session.created") return;
   const mode = readConfig().defaultMode ?? "full";
@@ -68,9 +73,14 @@ event: async ({ event }) => {
 },
 ```
 
-**Caching note:** `experimental.chat.system.transform` runs before every inference call. The injected string lands in `system[0]` which `applyCaching()` always marks for caching (first 2 system messages). Full ruleset loads once, hits cache on every subsequent turn. No per-session re-injection cost.
+**Why separate from Hook 1a:** The flag file is mutable runtime state — `/caveman <level>` commands update it mid-session. Hook 1a (`experimental.chat.system.transform`) reads the flag to know the current mode. Hook 1b initializes it at session start so the flag reflects the configured default before any command fires.
 
-**SKILL.md source:** Plugin reads `path.join(__dirname, "../skills/caveman/SKILL.md")` at runtime — same pattern as original. Edits to the skill propagate automatically, no hardcoded duplication.
+**Flag consumers:**
+- `experimental.chat.system.transform` — reads current mode to select ruleset
+- `chat.message` — reads current mode after `/caveman` switches
+- `tui.prompt.append` — reads current mode to render badge
+
+Hook 1b is not about system prompt injection; it is flag lifecycle management. The two hooks are independent concerns that upstream bundled into one script.
 
 ---
 
@@ -81,8 +91,7 @@ event: async ({ event }) => {
 **What it does:**
 
 1. Detects natural language activation ("activate caveman", "less tokens", "be brief")
-2. Syncs flag file when mode changes
-3. Injects compact per-turn reminder so caveman stays in model attention
+2. Syncs flag file when mode changes via `/caveman <level>` or natural language
 
 **OpenCode implementation:**
 
@@ -109,31 +118,12 @@ event: async ({ event }) => {
     const defMode = readConfig().defaultMode;
     if (defMode !== "off") writeModeFlag(defMode);
   }
-
-  // Per-turn reinforcement: keep caveman in model attention on every turn
-  const activeMode = readModeFlag();
-  if (activeMode && !INDEPENDENT_MODES.has(activeMode)) {
-    output.parts.push({
-      id: partId(),
-      sessionID: input.sessionID,
-      messageID: output.message.id,
-      type: "text",
-      text: `CAVEMAN MODE ACTIVE (${activeMode}). Drop articles/filler/pleasantries/hedging. Fragments OK. Code/commits/security: write normal.`,
-      synthetic: true,
-    });
-  }
 },
 ```
 
 **Logic order:** mode switch (`/caveman <level>`) checked first so it exits before activation/deactivation phrase matching. Deactivation before activation to avoid conflict when both phrases appear.
 
-**`synthetic: true`** — marks the injected part as non-user-authored so OpenCode can distinguish it from real user input.
-
-**`output.message.id`** — use the existing message's ID, not a fresh one; `partId()` generates a unique part ID via cuid.
-
-**Why per-turn reminder:** OpenCode context may compact. System prompt gets pruned before user messages. A short reinforcement string (< 30 tokens) in `output.parts` keeps caveman in the model's attention window without re-loading the full ruleset.
-
-**Independent modes** (`commit`, `review`, `compress`): skip reinforcement — they have their own skill behavior.
+**No per-turn reminder injected here.** Upstream's `caveman-mode-tracker.js` appended a short `additionalContext` reminder every turn because `caveman-activate.js` emits the ruleset only once (SessionStart), and context compaction can prune it. In CaveOpen, `experimental.chat.system.transform` fires before every inference and re-injects the full ruleset into `system[0]` — so the ruleset is always present regardless of compaction. Injecting a reminder here would be redundant and would consume one of the last-2 non-system cache slots `applyCaching()` marks.
 
 ---
 
@@ -311,19 +301,17 @@ Caveman injects content at multiple points. Each must be safe for OpenCode's two
 | Injection point               | Hook                                      | Cache behavior                                       | Safe?                                  |
 | ----------------------------- | ----------------------------------------- | ---------------------------------------------------- | -------------------------------------- |
 | Full caveman ruleset          | `experimental.chat.system.transform`      | Goes into `system[0]` → always cached                | ✅ Cached, no repeat cost              |
-| Per-turn reinforcement        | `chat.message` → `output.parts`           | User-turn message; last 2 non-system get cache marks | ✅ Tiny string (~30 tokens), ephemeral |
-| Stats output                  | `command.execute.before` → `output.parts` | Same as above — one-shot, not repeated               | ✅ No cache impact                     |
+| Stats output                  | `command.execute.before` → `output.parts` | User-turn message; one-shot, not repeated            | ✅ No cache impact                     |
 | Session activation flag write | `session.created` event                   | No model context — pure side effect                  | ✅ No cache impact                     |
 | History write                 | `session.idle` event                      | No model context — pure side effect                  | ✅ No cache impact                     |
 
 **Key rules from CACHING.md:**
 
 - `applyCaching()` marks `system[0..1]` + last 2 non-system messages
-- Plugin-injected system content via `experimental.chat.system.transform` lands in those slots → cached
-- Keep full ruleset in system transform (high reuse, cached), NOT in `chat.message` (ephemeral)
-- Per-turn `chat.message` injection must stay small — one sentence is fine, dumping the full ruleset every turn would thrash the last-2 cache slots
+- Plugin-injected system content via `experimental.chat.system.transform` lands in `system[0]` → always cached
+- Full ruleset stays in system transform only — `chat.message` does not inject context, preserving both last-2 non-system cache slots for real user messages
 
-**Gateway exception:** If user runs `@ai-sdk/gateway`, `applyCaching()` is skipped entirely (gateway handles caching). Plugin behavior unchanged — rules still inject into system, still small per-turn reminder. Just no cache marks.
+**Gateway exception:** If user runs `@ai-sdk/gateway`, `applyCaching()` is skipped entirely (gateway handles caching). Plugin behavior unchanged — rules still inject into `system[0]` via transform. Just no cache marks.
 
 ---
 
@@ -341,7 +329,7 @@ caveopen/
         index.ts                    # Module entry — composes caveman hooks, exports cavemanHooks()
         hooks/
           activation.ts             # experimental.chat.system.transform + session.created
-          message.ts                # chat.message: mode tracking + per-turn reinforcement
+          message.ts                # chat.message: mode tracking (activation, deactivation, /caveman switches)
           commands.ts               # command.execute.before: /caveman-stats, /caveman-*
           history.ts                # session.idle: write ~/.caveman/.caveman-history.jsonl
           tui.ts                    # tui.prompt.append: compact status badge (TUI only)

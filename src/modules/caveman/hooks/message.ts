@@ -4,11 +4,9 @@ import type { CavemanMode } from "../lib/config.js";
 import {
   isValidMode,
   readConfig,
-  readModeFlag,
   removeModeFlag,
   writeModeFlag,
 } from "../lib/config.js";
-import { cuid, partId } from "../../../lib/cuid.js";
 
 const ACTIVATION_PHRASES = [
   "activate caveman",
@@ -22,8 +20,6 @@ const ACTIVATION_PHRASES = [
 ];
 
 const DEACTIVATION_PHRASES = ["stop caveman", "normal mode", "caveman off"];
-
-const INDEPENDENT_MODES = new Set(["commit", "review", "compress"]);
 
 function isActivationPhrase(prompt: string): boolean {
   return ACTIVATION_PHRASES.some((p) => prompt.includes(p));
@@ -71,18 +67,6 @@ export function chatMessageHook(
     if (isActivationPhrase(prompt)) {
       const defMode = readConfig().defaultMode;
       if (defMode !== "off") writeModeFlag(defMode);
-    }
-
-    const activeMode = readModeFlag();
-    if (activeMode && !INDEPENDENT_MODES.has(activeMode)) {
-      output.parts.push({
-        id: partId(),
-        sessionID: input.sessionID,
-        messageID: output.message.id,
-        type: "text",
-        text: `CAVEMAN MODE ACTIVE (${activeMode}). Drop articles/filler/pleasantries/hedging. Fragments OK. Code/commits/security: write normal.`,
-        synthetic: true,
-      });
     }
   };
 }
