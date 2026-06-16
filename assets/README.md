@@ -112,7 +112,6 @@ Override model per-agent in `opencode.json`:
 ~/.config/opencode/                 (global) or .opencode/ (project)
 ├── plugins/
 │   └── caveopen/
-│       ├── FORMAT.md               cavekit spec format reference
 │       └── README.md               this file
 ├── skills/
 │   ├── caveman/SKILL.md

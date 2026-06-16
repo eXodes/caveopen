@@ -488,22 +488,6 @@ function runCLI(): void {
     printWarn(`copy commands: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // FORMAT.md: cavekit only
-  if (hasCavekit) {
-    try {
-      copyFileWithState(
-        join(assetsDir, "FORMAT.md"),
-        join(opencodeDir, "plugins", "caveopen", "FORMAT.md"),
-        "plugins",
-        "caveopen/FORMAT.md",
-      );
-    } catch (e) {
-      printWarn(
-        `copy FORMAT.md: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-  }
-
   // README.md: always (not module-gated; always useful)
   try {
     copyFileWithState(

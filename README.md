@@ -67,7 +67,7 @@ Caveman mode persists across turns and supports multiple compression levels (`li
 
 A port of [cavekit v4](https://github.com/JuliusBrussee/cavekit) that adds spec-driven development (SDD) to OpenCode. When a `SPEC.md` exists at project root, caveopen automatically injects a compact summary of the goal and task table into the system prompt, giving the agent spec context on every turn without reloading the full document.
 
-The `/ck:init` command bootstraps a project by copying `FORMAT.md` — the canonical encoding reference that `ck:spec`, `ck:build`, and `ck:check` all read from. All three skills are included and work the same as the upstream Claude Code versions.
+The `/ck:init` command bootstraps a project by copying `FORMAT.md` — the canonical encoding reference that `/ck:spec`, `/ck:build`, and `/ck:check` all read from. All three skills are included and work the same as the upstream Claude Code versions.
 
 ### cavemem — persistent session memory
 
