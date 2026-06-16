@@ -1,26 +1,6 @@
-declare const Bun: {
-  spawn(cmd: string[], opts: { stdin: "pipe"; stdout: "pipe"; stderr: "pipe" }): {
-    stdin: { write(s: string): void; end(): void };
-    stdout: ReadableStream;
-    exited: Promise<number>;
-  };
-} | undefined;
-
-async function spawnBun(name: string, json: string): Promise<string> {
-  const proc = Bun!.spawn(["cavemem", "hook", "run", name], {
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  proc.stdin.write(json);
-  proc.stdin.end();
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  return text;
-}
+import { spawn } from "node:child_process";
 
 function spawnNode(name: string, json: string): Promise<string> {
-  const { spawn } = require("child_process") as typeof import("child_process");
   return new Promise((resolve, reject) => {
     const proc = spawn("cavemem", ["hook", "run", name], {
       stdio: ["pipe", "pipe", "pipe"],
@@ -43,10 +23,7 @@ export async function runCavememHook(
   const json = JSON.stringify(payload);
   let text: string;
   try {
-    text =
-      typeof Bun !== "undefined" && Bun != null ?
-        await spawnBun(name, json)
-      : await spawnNode(name, json);
+    text = await spawnNode(name, json);
   } catch {
     return null;
   }

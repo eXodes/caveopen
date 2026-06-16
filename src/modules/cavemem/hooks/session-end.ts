@@ -17,7 +17,3 @@ export async function handleSessionDeleted(
   await runCavememHook("session-end", { session_id: sessionID });
   deleteCachedContext(sessionID);
 }
-
-export async function disposeHook(): Promise<void> {
-  // cavemem CLI manages its own store; nothing to flush here
-}
