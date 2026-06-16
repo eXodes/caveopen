@@ -8,6 +8,7 @@ export type HistoryEntry = {
   model: string | null;
   output_tokens: number;
   cache_read_tokens: number;
+  actual_cost?: number;
   est_saved_tokens: number;
   est_saved_usd: number;
 };

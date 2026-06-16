@@ -5,6 +5,7 @@ export type SessionTokens = {
   input: number;
   output: number;
   cache: { read: number; write: number };
+  cost: number;
   modelID: string | null;
   providerID: string | null;
 };
@@ -25,6 +26,7 @@ export async function getSessionTokens(
     input: 0,
     output: 0,
     cache: { read: 0, write: 0 },
+    cost: 0,
     modelID: null,
     providerID: null,
   };
@@ -37,6 +39,7 @@ export async function getSessionTokens(
     totals.output += t.output;
     totals.cache.read += t.cache.read;
     totals.cache.write += t.cache.write;
+    totals.cost += msg.cost;
     totals.modelID = msg.modelID;
     totals.providerID = msg.providerID;
   }

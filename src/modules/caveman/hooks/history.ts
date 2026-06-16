@@ -27,11 +27,12 @@ export async function handleSessionIdle(
 
   const mode = readModeFlag();
   const model = tokens.modelID;
+  const provider = tokens.providerID;
 
   const { estSavedTokens, estSavedUsd } = derivesSavings({
     outputTokens: tokens.output,
+    actualCost: tokens.cost,
     mode,
-    model,
   });
 
   appendHistory(
@@ -41,9 +42,10 @@ export async function handleSessionIdle(
       session_id: sessionID,
       mode: mode ?? null,
       model,
-      provider: tokens.providerID,
+      provider,
       output_tokens: tokens.output,
       cache_read_tokens: tokens.cache.read,
+      actual_cost: tokens.cost,
       est_saved_tokens: estSavedTokens,
       est_saved_usd: estSavedUsd,
     }),

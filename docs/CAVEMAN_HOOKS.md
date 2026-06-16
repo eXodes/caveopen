@@ -204,8 +204,8 @@ event: async ({ event }) => {
 
   const { estSavedTokens, estSavedUsd } = derivesSavings({
     outputTokens: tokens.output,
+    actualCost: tokens.cost,
     mode,
-    model,
   });
 
   appendHistory(
@@ -228,7 +228,9 @@ event: async ({ event }) => {
 },
 ```
 
-**`getSessionTokens()`** calls `client.session.messages()` and sums `tokens.{input,output,cache.read,cache.write}` across all assistant messages. Returns `null` if no output tokens yet. `modelID` is taken from the last assistant message (`AssistantMessage.modelID`) and stored in history.
+**`getSessionTokens()`** calls `client.session.messages()` and sums `tokens.{input,output,cache.read,cache.write}` and `cost` across all assistant messages. Returns `null` if no output tokens yet. `modelID` is taken from the last assistant message (`AssistantMessage.modelID`) and stored in history for informational purposes.
+
+**Cost sourcing:** `AssistantMessage.cost` holds the actual USD cost OpenCode computed using its own model pricing table. We sum this across all messages in `SessionTokens.cost` — no hardcoded price table needed. `derivesSavings()` takes `actualCost: number` and multiplies by the mode's savings ratio: `estSavedUsd = actualCost * ratio`. Token savings (`estSavedTokens`) are still estimated as `outputTokens * ratio` since OpenCode doesn't expose per-message token-saved counts.
 
 **History schema** (same as caveman, compatible with caveman-stats aggregation):
 
@@ -241,10 +243,13 @@ event: async ({ event }) => {
   "provider": "anthropic",
   "output_tokens": 4821,
   "cache_read_tokens": 12048,
+  "actual_cost": 0.0723,
   "est_saved_tokens": 3134,
-  "est_saved_usd": 0.047
+  "est_saved_usd": 0.029
 }
 ```
+
+`actual_cost` is the sum of `AssistantMessage.cost` across all messages — OpenCode's own calculation using current provider pricing. `est_saved_usd = actual_cost * savings_ratio[mode]`.
 
 **`/caveman-stats --all` and `--since Nd`:** reads history file directly via the same `aggregateHistory()` logic as caveman — no changes needed to that function.
 

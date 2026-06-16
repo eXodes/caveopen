@@ -23,6 +23,7 @@ export function commandExecuteBeforeHook(
           {
             input: tokens.input,
             output: tokens.output,
+            cost: tokens.cost,
             cache: tokens.cache,
           }
         : undefined,

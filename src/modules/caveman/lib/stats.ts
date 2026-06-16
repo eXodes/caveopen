@@ -1,14 +1,6 @@
 import type { CavemanMode } from "./config.js";
 import type { HistoryAggregate } from "./history.js";
 
-const OUTPUT_TOKEN_COST_PER_1K: Record<string, number> = {
-  "claude-opus-4-8": 0.075,
-  "claude-sonnet-4-6": 0.015,
-  "claude-haiku-4-5": 0.00125,
-};
-
-const DEFAULT_COST_PER_1K = 0.015;
-
 const SAVINGS_RATIO: Record<CavemanMode, number> = {
   "lite": 0.2,
   "full": 0.4,
@@ -21,6 +13,7 @@ const SAVINGS_RATIO: Record<CavemanMode, number> = {
 type TokenInfo = {
   input?: number;
   output?: number;
+  cost?: number;
   cache?: { read?: number; write?: number };
 };
 
@@ -32,11 +25,11 @@ type StatsInput = {
 
 type SavingsInput = {
   outputTokens: number;
+  actualCost: number;
   mode: CavemanMode | null;
-  model: string | null;
 };
 
-export function derivesSavings({ outputTokens, mode, model }: SavingsInput): {
+export function derivesSavings({ outputTokens, actualCost, mode }: SavingsInput): {
   estSavedTokens: number;
   estSavedUsd: number;
 } {
@@ -44,11 +37,7 @@ export function derivesSavings({ outputTokens, mode, model }: SavingsInput): {
 
   const ratio = SAVINGS_RATIO[mode] ?? 0;
   const estSavedTokens = Math.round(outputTokens * ratio);
-  const costPer1k =
-    model && OUTPUT_TOKEN_COST_PER_1K[model] ?
-      OUTPUT_TOKEN_COST_PER_1K[model]!
-    : DEFAULT_COST_PER_1K;
-  const estSavedUsd = (estSavedTokens / 1000) * costPer1k;
+  const estSavedUsd = actualCost * ratio;
 
   return { estSavedTokens, estSavedUsd };
 }
@@ -58,10 +47,11 @@ export function formatStats({ tokens, mode, sessionID }: StatsInput): string {
   const cacheRead = tokens?.cache?.read ?? 0;
   const cacheWrite = tokens?.cache?.write ?? 0;
   const input = tokens?.input ?? 0;
+  const actualCost = tokens?.cost ?? 0;
 
   const { estSavedTokens, estSavedUsd } =
     mode ?
-      derivesSavings({ outputTokens: out, mode, model: null })
+      derivesSavings({ outputTokens: out, actualCost, mode })
     : { estSavedTokens: 0, estSavedUsd: 0 };
 
   return [
@@ -71,6 +61,7 @@ export function formatStats({ tokens, mode, sessionID }: StatsInput): string {
     `Output tokens:     ${fmt(out)}`,
     `Cache read:        ${fmt(cacheRead)}`,
     `Cache write:       ${fmt(cacheWrite)}`,
+    `Actual cost:       $${actualCost.toFixed(4)}`,
     `Est. saved tokens: ${fmt(estSavedTokens)} (~${SAVINGS_RATIO[mode as CavemanMode] ? (SAVINGS_RATIO[mode as CavemanMode]! * 100).toFixed(0) : 0}%)`,
     `Est. saved cost:   $${estSavedUsd.toFixed(4)}`,
   ].join("\n");
