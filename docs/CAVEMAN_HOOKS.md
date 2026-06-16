@@ -200,7 +200,7 @@ event: async ({ event }) => {
   if (!tokens) return; // no output tokens yet
 
   const mode = readModeFlag();
-  const model: string | null = null; // not exposed per-session by SDK
+  const model = tokens.modelID; // last assistant message modelID from session messages
 
   const { estSavedTokens, estSavedUsd } = derivesSavings({
     outputTokens: tokens.output,
@@ -215,6 +215,7 @@ event: async ({ event }) => {
       session_id: sessionID,
       mode: mode ?? null,
       model,
+      provider: tokens.providerID,
       output_tokens: tokens.output,
       cache_read_tokens: tokens.cache.read,
       est_saved_tokens: estSavedTokens,
@@ -227,7 +228,7 @@ event: async ({ event }) => {
 },
 ```
 
-**`getSessionTokens()`** calls `client.session.messages()` and sums `tokens.{input,output,cache.read,cache.write}` across all assistant messages. Returns `null` if no output tokens yet. Model string is not exposed per-session by the SDK — stored as `null` in history.
+**`getSessionTokens()`** calls `client.session.messages()` and sums `tokens.{input,output,cache.read,cache.write}` across all assistant messages. Returns `null` if no output tokens yet. `modelID` is taken from the last assistant message (`AssistantMessage.modelID`) and stored in history.
 
 **History schema** (same as caveman, compatible with caveman-stats aggregation):
 
@@ -237,6 +238,7 @@ event: async ({ event }) => {
   "session_id": "abc123",
   "mode": "full",
   "model": "claude-sonnet-4-6",
+  "provider": "anthropic",
   "output_tokens": 4821,
   "cache_read_tokens": 12048,
   "est_saved_tokens": 3134,
@@ -351,7 +353,10 @@ caveopen/
 ```ts
 // src/modules/caveman/index.ts
 import type { PluginInput, Hooks } from "@opencode-ai/plugin";
-import { systemTransformHook, handleSessionCreated } from "./hooks/activation.js";
+import {
+  systemTransformHook,
+  handleSessionCreated,
+} from "./hooks/activation.js";
 import { chatMessageHook } from "./hooks/message.js";
 import { handleSessionIdle } from "./hooks/history.js";
 import { commandExecuteBeforeHook } from "./hooks/commands.js";
@@ -384,9 +389,10 @@ export type CaveOpenMode = "caveman" | "cavekit" | "cavemem";
 const ALL_MODES: CaveOpenMode[] = ["caveman", "cavekit", "cavemem"];
 
 export const CaveOpenPlugin: Plugin = async (ctx, options) => {
-  const modes: CaveOpenMode[] = Array.isArray(options?.modes)
-    ? (options.modes as string[]).filter((m): m is CaveOpenMode =>
-        ALL_MODES.includes(m as CaveOpenMode)
+  const modes: CaveOpenMode[] =
+    Array.isArray(options?.modes) ?
+      (options.modes as string[]).filter((m): m is CaveOpenMode =>
+        ALL_MODES.includes(m as CaveOpenMode),
       )
     : ALL_MODES;
 

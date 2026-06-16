@@ -26,7 +26,7 @@ export async function handleSessionIdle(
   if (!tokens) return;
 
   const mode = readModeFlag();
-  const model: string | null = null;
+  const model = tokens.modelID;
 
   const { estSavedTokens, estSavedUsd } = derivesSavings({
     outputTokens: tokens.output,
@@ -41,6 +41,7 @@ export async function handleSessionIdle(
       session_id: sessionID,
       mode: mode ?? null,
       model,
+      provider: tokens.providerID,
       output_tokens: tokens.output,
       cache_read_tokens: tokens.cache.read,
       est_saved_tokens: estSavedTokens,
