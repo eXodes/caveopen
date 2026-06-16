@@ -1,7 +1,7 @@
 import type { Event } from "@opencode-ai/sdk";
-import { getStore, closeStore } from "../lib/store.js";
+import type { PluginInput } from "@opencode-ai/plugin";
+import { runCavememHook } from "../lib/runner.js";
 import { deleteCachedContext } from "../lib/session-cache.js";
-import { PluginInput } from "@opencode-ai/plugin";
 
 export async function handleSessionDeleted(
   event: Event,
@@ -14,26 +14,10 @@ export async function handleSessionDeleted(
   )?.sessionID;
   if (!sessionID) return;
 
-  const store = await getStore();
-  if (!store) return;
-
-  const turns = store.storage
-    .listSummaries(sessionID)
-    .filter((s: { scope: string; content: string }) => s.scope === "turn")
-    .map((s: { content: string }) => s.content);
-
-  if (turns.length > 0) {
-    store.addSummary({
-      session_id: sessionID,
-      scope: "session",
-      content: turns.slice(0, 20).join("\n"),
-    });
-  }
-
-  store.endSession(sessionID);
+  await runCavememHook("session-end", { session_id: sessionID });
   deleteCachedContext(sessionID);
 }
 
 export async function disposeHook(): Promise<void> {
-  closeStore();
+  // cavemem CLI manages its own store; nothing to flush here
 }
