@@ -1,0 +1,67 @@
+name: "Release Versioning"
+description: "Detect version bump type from conventional commits"
+
+inputs:
+  type:
+    description: "Version bump type (auto/patch/minor/major)"
+    required: false
+    default: "auto"
+
+outputs:
+  bump:
+    description: "Version bump to apply (patch/minor/major)"
+    value: ${{ steps.detect.outputs.bump }}
+  inferred-type:
+    description: "Bump type inferred from commits"
+    value: ${{ steps.detect.outputs.inferred_type }}
+  commits-analyzed:
+    description: "Number of commits analyzed"
+    value: ${{ steps.detect.outputs.commits_analyzed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect version bump
+      id: detect
+      shell: bash
+      run: |
+        PREV_TAG=$(git tag --sort=-version:refname | head -1)
+
+        if [ -z "$PREV_TAG" ]; then
+          SUBJECTS=$(git log --pretty=format:"%s" HEAD)
+          BODIES=$(git log --pretty=format:"%B" HEAD)
+        else
+          SUBJECTS=$(git log --pretty=format:"%s" "${PREV_TAG}..HEAD")
+          BODIES=$(git log --pretty=format:"%B" "${PREV_TAG}..HEAD")
+        fi
+
+        COUNT=$(echo "$SUBJECTS" | grep -c . || true)
+
+        INFERRED="patch"
+
+        # Check commit footers for BREAKING CHANGE token (conventional commits spec)
+        if echo "$BODIES" | grep -qiE "^BREAKING[- ]CHANGE:"; then
+          INFERRED="major"
+        else
+          while IFS= read -r subject; do
+            if echo "$subject" | grep -qE "(\(.+\))?!:"; then
+              INFERRED="major"
+              break
+            elif echo "$subject" | grep -qE "^feat(\(.+\))?:"; then
+              [ "$INFERRED" != "major" ] && INFERRED="minor"
+            fi
+          done <<< "$SUBJECTS"
+        fi
+
+        INPUT="${{ inputs.type }}"
+        if [ "$INPUT" = "auto" ] || [ -z "$INPUT" ]; then
+          BUMP="$INFERRED"
+        else
+          BUMP="$INPUT"
+        fi
+
+        echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+        echo "inferred_type=$INFERRED" >> "$GITHUB_OUTPUT"
+        echo "commits_analyzed=$COUNT" >> "$GITHUB_OUTPUT"
+
+        echo "🤖 Inferred: $INFERRED | Applied: $BUMP | Commits: $COUNT"

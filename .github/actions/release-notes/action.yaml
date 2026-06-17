@@ -1,0 +1,118 @@
+name: "Release Notes"
+description: "Generate categorized release notes and create GitHub release"
+
+inputs:
+  tag:
+    description: "Release tag (e.g. v1.2.3)"
+    required: true
+  github-token:
+    description: "GitHub token for release creation"
+    required: true
+    default: ${{ github.token }}
+
+outputs:
+  release-url:
+    description: "URL of the created GitHub release"
+    value: ${{ steps.create.outputs.release_url }}
+  release-id:
+    description: "ID of the created GitHub release"
+    value: ${{ steps.create.outputs.release_id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate notes and create release
+      id: create
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+      run: |
+        TAG="${{ inputs.tag }}"
+        PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1)
+
+        if [ -z "$PREV_TAG" ]; then
+          COMMITS=$(git log --pretty=format:"%h %s" HEAD)
+          BODIES=$(git log --pretty=format:"%B" HEAD)
+        else
+          COMMITS=$(git log --pretty=format:"%h %s" "${PREV_TAG}..HEAD")
+          BODIES=$(git log --pretty=format:"%B" "${PREV_TAG}..HEAD")
+        fi
+
+        BREAKING=""
+        FEATURES=""
+        FIXES=""
+        PERF=""
+        REFACTOR=""
+        DOCS=""
+        TEST=""
+        STYLE=""
+
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+
+          HASH="${line%% *}"
+          MESSAGE="${line#* }"
+
+          # Parse: type(scope)!: description
+          if [[ "$MESSAGE" =~ ^([a-zA-Z]+)(\(([^)]+)\))?(!)?: (.+)$ ]]; then
+            TYPE="${BASH_REMATCH[1],,}"
+            SCOPE="${BASH_REMATCH[3]}"
+            IS_BREAKING="${BASH_REMATCH[4]}"
+            DESC="${BASH_REMATCH[5]}"
+
+            SCOPE_PART=""
+            [ -n "$SCOPE" ] && SCOPE_PART="**${SCOPE}**: "
+            ENTRY="- ${SCOPE_PART}${DESC} (${HASH})"$'\n'
+
+            # Breaking commits go into breaking AND their type bucket
+            [ -n "$IS_BREAKING" ] && BREAKING="${BREAKING}${ENTRY}"
+
+            case "$TYPE" in
+              feat)     FEATURES="${FEATURES}${ENTRY}" ;;
+              fix)      FIXES="${FIXES}${ENTRY}" ;;
+              perf)     PERF="${PERF}${ENTRY}" ;;
+              refactor) REFACTOR="${REFACTOR}${ENTRY}" ;;
+              docs)     DOCS="${DOCS}${ENTRY}" ;;
+              test)     TEST="${TEST}${ENTRY}" ;;
+              style)    STYLE="${STYLE}${ENTRY}" ;;
+              # chore/ci/build → intentionally excluded
+            esac
+          fi
+        done <<< "$COMMITS"
+
+        # Check commit footers for BREAKING CHANGE token (conventional commits spec)
+        if [ -z "$BREAKING" ] && echo "$BODIES" | grep -qiE "^BREAKING[- ]CHANGE:"; then
+          BREAKING="- Breaking changes declared in commit footers"$'\n'
+        fi
+
+        NOTES=""
+        [ -n "$BREAKING" ] && NOTES="${NOTES}## ⚠️ Breaking Changes"$'\n\n'"${BREAKING}"$'\n'
+        [ -n "$FEATURES" ] && NOTES="${NOTES}## ✨ New Features"$'\n\n'"${FEATURES}"$'\n'
+        [ -n "$FIXES" ]    && NOTES="${NOTES}## 🐛 Bug Fixes"$'\n\n'"${FIXES}"$'\n'
+        [ -n "$PERF" ]     && NOTES="${NOTES}## ⚡ Performance Improvements"$'\n\n'"${PERF}"$'\n'
+        [ -n "$REFACTOR" ] && NOTES="${NOTES}## ♻️ Code Refactoring"$'\n\n'"${REFACTOR}"$'\n'
+        [ -n "$DOCS" ]     && NOTES="${NOTES}## 📚 Documentation"$'\n\n'"${DOCS}"$'\n'
+        [ -n "$TEST" ]     && NOTES="${NOTES}## 🧪 Tests"$'\n\n'"${TEST}"$'\n'
+        [ -n "$STYLE" ]    && NOTES="${NOTES}## 💄 Styling"$'\n\n'"${STYLE}"$'\n'
+
+        if [ -z "$NOTES" ]; then
+          NOTES="## 📝 Changes"$'\n\n'"This release includes internal improvements and updates."$'\n\n'
+        fi
+
+        REPO="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+        NOTES="${NOTES}---"$'\n\n'"**Full Changelog**: ${REPO}/commits/${TAG}"
+
+        NOTES_FILE=$(mktemp)
+        printf '%s' "$NOTES" > "$NOTES_FILE"
+
+        RELEASE_URL=$(gh release create "$TAG" \
+          --title "$TAG" \
+          --notes-file "$NOTES_FILE" \
+          --verify-tag)
+
+        RELEASE_ID=$(gh release view "$TAG" --json id --jq '.id')
+
+        echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+        echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+
+        echo "🌐 Release: $RELEASE_URL"

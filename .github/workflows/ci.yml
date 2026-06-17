@@ -4,21 +4,34 @@ on:
   push:
     branches:
       - main
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   ci:
+    name: Check
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "lts/jod"
+          node-version-file: ".nvmrc"
+          cache: npm
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - run: npm run typecheck
+      - name: Run type checker
+        run: npm run typecheck
 
-      - run: npm run build
+      - name: Run build
+        run: npm run build
 
-      - run: npm test
+      - name: Run tests
+        run: npm test

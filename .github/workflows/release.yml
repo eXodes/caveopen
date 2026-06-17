@@ -4,47 +4,63 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: "Commit SHA to tag"
-        required: true
+        description: "Commit SHA to release (defaults to HEAD)"
+        required: false
         type: string
       bump:
-        description: "Version bump type"
-        required: true
+        description: "Version bump (auto-detect from commits if omitted)"
+        required: false
         type: choice
-        default: patch
+        default: auto
         options:
+          - auto
           - patch
           - minor
           - major
 
+permissions:
+  contents: write
+
 jobs:
   release:
+    name: Publish
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    environment: Release
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ inputs.commit }}
+          ref: ${{ inputs.commit || github.sha }}
 
-      - uses: actions/setup-node@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "lts/jod"
+          node-version-file: ".nvmrc"
+          cache: npm
           registry-url: "https://registry.npmjs.org"
 
-      - name: Compute new version
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Detect version bump
+        id: versioning
+        uses: ./.github/actions/release-versioning
+        with:
+          type: ${{ inputs.bump || 'auto' }}
+
+      - name: Bump version
         id: version
         run: |
-          RAW=$(npm version ${{ inputs.bump }} --no-git-tag-version)
-          NEW_VERSION=${RAW#v}
-          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          RAW=$(npm version ${{ steps.versioning.outputs.bump }} --no-git-tag-version)
+          echo "new_version=${RAW#v}" >> "$GITHUB_OUTPUT"
 
-      - run: npm ci
+      - name: Build and test
+        run: npm run prepublishOnly
 
-      - run: npm run prepublishOnly
-
-      - run: npm publish --ignore-scripts --tag latest
+      - name: Publish to npm
+        run: npm publish --ignore-scripts --tag latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -53,4 +69,19 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "v${{ steps.version.outputs.new_version }}"
-          git push origin "v${{ steps.version.outputs.new_version }}"
+          git push origin HEAD:main "v${{ steps.version.outputs.new_version }}"
+
+      - name: Create GitHub release
+        id: release
+        uses: ./.github/actions/release-notes
+        with:
+          tag: "v${{ steps.version.outputs.new_version }}"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Output release info
+        run: |
+          echo "🏷️ Released: v${{ steps.version.outputs.new_version }}"
+          echo "🤖 Inferred type: ${{ steps.versioning.outputs.inferred-type }}"
+          echo "📊 Commits analyzed: ${{ steps.versioning.outputs.commits-analyzed }}"
+          echo "🌐 Release URL: ${{ steps.release.outputs.release-url }}"
+          echo "::notice title=Release Created::v${{ steps.version.outputs.new_version }} published to npm — ${{ steps.release.outputs.release-url }}"
