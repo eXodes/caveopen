@@ -66,9 +66,9 @@ Caveman mode persists across turns and supports multiple compression levels (`li
 
 ### cavekit — spec-driven development
 
-A port of [cavekit v4](https://github.com/JuliusBrussee/cavekit) that adds spec-driven development (SDD) to OpenCode. When a `SPEC.md` exists at project root, caveopen automatically injects a compact summary of the goal and task table into the system prompt, giving the agent spec context on every turn without reloading the full document.
+A port of [cavekit v4](https://github.com/JuliusBrussee/cavekit) that adds spec-driven development (SDD) to OpenCode. The `/ck:init` command bootstraps a project by copying `FORMAT.md` — the canonical encoding reference that `/ck:spec`, `/ck:build`, and `/ck:check` all read from. All three skills are included and work the same as the upstream Claude Code versions.
 
-The `/ck:init` command bootstraps a project by copying `FORMAT.md` — the canonical encoding reference that `/ck:spec`, `/ck:build`, and `/ck:check` all read from. All three skills are included and work the same as the upstream Claude Code versions.
+Skills read `SPEC.md` directly from disk on demand. No ambient spec context is injected into the system prompt — that approach caused the model to hallucinate connections between open tasks and unrelated prompts.
 
 ### cavemem — persistent session memory
 
@@ -152,11 +152,11 @@ Each module registers TypeScript hooks into OpenCode's plugin lifecycle. The thr
 ```
 CaveOpenPlugin
   ├── caveman  → experimental.chat.system.transform, chat.message, command.execute.before, event
-  ├── cavekit  → experimental.chat.system.transform, command.execute.before, event
+  ├── cavekit  → experimental.chat.messages.transform, command.execute.before, config
   └── cavemem  → experimental.chat.system.transform, chat.message, tool.execute.after, event, dispose
 ```
 
-System prompt injections land in `system[0]`/`system[1]` — the slots that OpenCode's `applyCaching()` always marks for prompt caching on Anthropic models. The full caveman ruleset and spec context are loaded once per session and served from cache on every subsequent turn.
+System prompt injections land in `system[0]`/`system[1]` — the slots that OpenCode's `applyCaching()` always marks for prompt caching on Anthropic models. The caveman ruleset and cavemem context are loaded once per session and served from cache on every subsequent turn.
 
 ---
 

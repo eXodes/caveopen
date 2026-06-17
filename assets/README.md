@@ -47,12 +47,13 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 ### cavekit
 
-| Hook                                 | Trigger                   | What it does                                                                                                    |
-| ------------------------------------ | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `command.execute.before`             | `/ck:init` command        | Copies `FORMAT.md` to `process.cwd()`; skips if already present; injects result text into output parts          |
-| `experimental.chat.system.transform` | Every main-agent LLM call | Reads cached SPEC.md summary for session; pushes it into `output.system[]`                                      |
-| `event` (`session.created`)          | New session opened        | Reads `SPEC.md` from cwd; extracts compact summary; stores in per-session cache                                 |
-| `event` (`file.watcher.updated`)     | File change detected      | If changed path ends with `SPEC.md`, marks all active sessions dirty — cache refreshes on next system transform |
+| Hook                                      | Trigger                | What it does                                                                                                                 |
+| ----------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `command.execute.before`                  | `/ck:init` command     | Copies `FORMAT.md` to `process.cwd()`; skips if already present; injects result text into output parts as an ignored part   |
+| `experimental.chat.messages.transform`    | Every user message     | If last message is `/ck:init`, empties `output.messages` to suppress LLM inference (output already handled by hook above)   |
+| `config`                                  | Plugin load            | Registers `/ck:init` as a named slash command in the TUI command palette                                                     |
+
+> **No system prompt injection.** Skills (`/ck:spec`, `/ck:build`, `/ck:check`) read `SPEC.md` directly from disk. Passive injection of spec context was removed — it caused hallucination on unrelated prompts.
 
 ### cavemem
 
@@ -72,9 +73,9 @@ Cavemem uses an **embedded SQLite store** (via `getStore()`) — no external CLI
 
 ```
 CaveOpenPlugin
-  ├── cavemanHooks(ctx)  → Hooks  ─┐
-  ├── caveMemHooks(ctx)  → Hooks  ─┤ mergeHooks(...hookSets)
-  └── cavekitHooks(ctx)  → Hooks  ─┘
+  ├── cavemanHooks(ctx)  → system.transform, chat.message, command.execute.before, event
+  ├── caveMemHooks(ctx)  → system.transform, chat.message, tool.execute.after, event, dispose
+  └── cavekitHooks(ctx)  → messages.transform, command.execute.before, config
 
 mergeHooks rules:
   same key (non-tool): chain a → b (both fire, output mutations accumulate)
