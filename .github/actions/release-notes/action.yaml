@@ -105,12 +105,16 @@ runs:
         NOTES_FILE=$(mktemp)
         printf '%s' "$NOTES" > "$NOTES_FILE"
 
-        RELEASE_URL=$(gh release create "$TAG" \
-          --title "$TAG" \
-          --notes-file "$NOTES_FILE" \
-          --verify-tag)
+        if gh release view "$TAG" &>/dev/null; then
+          RELEASE_URL=$(gh release view "$TAG" --json url --jq '.url')
+        else
+          RELEASE_URL=$(gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file "$NOTES_FILE" \
+            --verify-tag)
+        fi
 
-        RELEASE_ID=$(gh release view "$TAG" --json id --jq '.id')
+        RELEASE_ID=$(gh release view "$TAG" --json databaseId --jq '.databaseId')
 
         echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
         echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"

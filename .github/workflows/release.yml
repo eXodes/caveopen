@@ -50,6 +50,13 @@ jobs:
         with:
           type: ${{ inputs.bump || 'auto' }}
 
+      - name: Sync package version to latest tag
+        run: |
+          LATEST_TAG=$(git tag --sort=-version:refname | head -1)
+          if [ -n "$LATEST_TAG" ]; then
+            npm version "${LATEST_TAG#v}" --no-git-tag-version --allow-same-version
+          fi
+
       - name: Bump version
         id: version
         run: |
