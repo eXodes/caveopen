@@ -1,19 +1,11 @@
 import type { PluginInput } from "@opencode-ai/plugin";
-import type { Message, Part, TextPart } from "@opencode-ai/sdk";
+import type { Part, TextPart } from "@opencode-ai/sdk";
 
 export function extractText(parts: Part[]): string {
   return parts
     .filter((p): p is TextPart => p.type === "text")
     .map((p) => p.text)
     .join("\n");
-}
-
-export function stringifyShort(value: unknown): string {
-  try {
-    return JSON.stringify(value)?.slice(0, 2000) ?? "";
-  } catch {
-    return String(value).slice(0, 2000);
-  }
 }
 
 export async function getLastAssistantText(
@@ -31,7 +23,7 @@ export async function getLastAssistantText(
   for (const item of items) {
     const msg = item.info;
     if (msg.role !== "assistant") continue;
-    const parts: Part[] = item["parts"] ?? [];
+    const parts: Part[] = item.parts;
     const text = extractText(parts);
     if (text.trim()) return text;
   }

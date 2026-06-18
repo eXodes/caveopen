@@ -31,7 +31,7 @@ export function systemTransformHook(
   ctx: PluginInput,
 ): NonNullable<Hooks["experimental.chat.system.transform"]> {
   return async (input, output) => {
-    const sessionID = input["sessionID"];
+    const sessionID = input.sessionID;
     if (!sessionID) return;
 
     const context = getCachedContext(sessionID);

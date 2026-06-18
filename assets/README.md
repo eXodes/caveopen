@@ -57,24 +57,23 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 ### cavemem
 
-Cavemem uses an **embedded SQLite store** (via `getStore()`) — no external CLI or MCP server required. The store lives at `~/.cavemem/memory.db`.
+Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each hook spawns the CLI, writes a JSON payload to stdin, and reads structured output from stdout. Requires `cavemem` installed separately — all hooks silently no-op if the CLI is absent.
 
-| Hook                                 | Trigger              | What it does                                                                                                                  |
-| ------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]` (up to 3 prior sessions, same cwd) |
-| `chat.message`                       | User submits message | Records user prompt as `user_prompt` observation in store; enqueues embedding (best-effort, no embedder wired by default)     |
-| `tool.execute.after`                 | Any tool completes   | Records `tool_name + input + output` (truncated to 4000 chars) as `tool_use` observation in store                             |
-| `event` (`session.created`)          | New session opened   | Starts session in store; fetches summaries from up to 3 prior sessions in same cwd; caches as system context                  |
-| `event` (`session.idle`)             | Session goes idle    | Fetches last assistant message text; stores as `turn`-scope summary in store                                                  |
-| `event` (`session.deleted`)          | Session deleted      | Collapses all `turn` summaries (up to 20) into a `session`-scope summary; ends session; clears session cache                  |
-| `dispose`                            | Plugin teardown      | Closes the SQLite store                                                                                                       |
+| Hook                                 | Trigger              | What it does                                                                                                                         |
+| ------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]`                                           |
+| `chat.message`                       | User submits message | Fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation)                           |
+| `tool.execute.after`                 | Any tool completes   | Fires `cavemem hook run post-tool-use` with tool name, input, and output (both truncated to 2000 chars)                              |
+| `event` (`session.created`)          | New session opened   | Fires `cavemem hook run session-start` with session ID + cwd; caches returned prior-session context string for system prompt inject  |
+| `event` (`session.idle`)             | Session goes idle    | Fetches last assistant message via SDK; fires `cavemem hook run stop` with that text as `last_assistant_message`                     |
+| `event` (`session.deleted`)          | Session deleted      | Fires `cavemem hook run session-end`; evicts session from in-process context cache                                                   |
 
 ### Hook composition
 
 ```
 CaveOpenPlugin
   ├── cavemanHooks(ctx)  → system.transform, chat.message, command.execute.before, event
-  ├── caveMemHooks(ctx)  → system.transform, chat.message, tool.execute.after, event, dispose
+  ├── caveMemHooks(ctx)  → system.transform, chat.message, tool.execute.after, event
   └── cavekitHooks(ctx)  → messages.transform, command.execute.before, config
 
 mergeHooks rules:

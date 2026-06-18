@@ -23,7 +23,9 @@ function spawnNode(name: string, json: string): Promise<string> {
       stdio: ["pipe", "pipe", "pipe"],
     });
     let out = "";
-    proc.stdout.on("data", (chunk: Buffer) => { out += chunk.toString(); });
+    proc.stdout.on("data", (chunk: Buffer) => {
+      out += chunk.toString();
+    });
     proc.on("close", () => resolve(out));
     proc.on("error", reject);
     proc.stdin.write(json);
@@ -83,14 +85,16 @@ Only `session-start` and `user-prompt-submit` produce stdout. All other hooks st
 event: async ({ event }) => {
   if (event.type !== "session.created") return;
   const context = await runCavememHook("session-start", {
-    session_id: event.properties.sessionID,
+    session_id: event.properties.info.id,
     ide: "opencode",
     cwd: process.cwd(),
     // omit `source` — session.created is always a new session, never resume/clear/compact
   });
-  setCachedContext(event.properties.sessionID, context ?? "");
+  setCachedContext(event.properties.info.id, context ?? "");
 };
 ```
+
+**Event shape:** `session.created` carries `{ info: Session }` (same as `session.deleted`), not `{ sessionID }`. Session ID is `event.properties.info.id`.
 
 **`source` guard:** The handler returns `''` when `source` is set and not `'startup'` (skips injection on resume/clear/compact). OpenCode `session.created` fires once per new session only — omitting `source` means the guard never trips and prior-session context is always returned.
 
@@ -192,13 +196,13 @@ The handler rolls up all `scope: 'turn'` summaries into a `scope: 'session'` sum
 
 ## Caching Safety
 
-| Injection point         | Hook                                 | Cache behavior                                      |
-| ----------------------- | ------------------------------------ | --------------------------------------------------- |
-| Prior-session context   | `experimental.chat.system.transform` | Fixed per session → `system[0]` → KV-cached turn 2+ |
-| User prompt observation | `chat.message` (write only)          | No model context mutation                           |
-| Tool observation        | `tool.execute.after` (write only)    | No model context mutation                           |
-| Turn summary            | `session.idle` (write only)          | No model context mutation                           |
-| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                      |
+| Injection point         | Hook                                      | Cache behavior                                      |
+| ----------------------- | ----------------------------------------- | --------------------------------------------------- |
+| Prior-session context   | `experimental.chat.system.transform`      | Fixed per session → `system[0]` → KV-cached turn 2+ |
+| User prompt observation | `chat.message` (write only)               | No model context mutation                           |
+| Tool observation        | `tool.execute.after` (write only)         | No model context mutation                           |
+| Turn summary            | `session.idle` (write only)               | No model context mutation                           |
+| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                           |
 
 Prior-session context string is immutable after `session.created`. Never re-fetch or mutate mid-session.
 

@@ -153,7 +153,7 @@ Each module registers TypeScript hooks into OpenCode's plugin lifecycle. The thr
 CaveOpenPlugin
   ├── caveman  → experimental.chat.system.transform, chat.message, command.execute.before, event
   ├── cavekit  → command.execute.before, config
-  └── cavemem  → experimental.chat.system.transform, chat.message, tool.execute.after, event, dispose
+  └── cavemem  → experimental.chat.system.transform, chat.message, tool.execute.after, event
 ```
 
 System prompt injections land in `system[0]`/`system[1]` — the slots that OpenCode's `applyCaching()` always marks for prompt caching on Anthropic models. The caveman ruleset and cavemem context are loaded once per session and served from cache on every subsequent turn.
