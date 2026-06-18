@@ -54,7 +54,9 @@ runs:
           MESSAGE="${line#* }"
 
           # Parse: type(scope)!: description
-          if [[ "$MESSAGE" =~ ^([a-zA-Z]+)(\(([^)]+)\))?(!)?: (.+)$ ]]; then
+          # Store regex in variable — bash misparses parentheses when inline
+          CONVENTIONAL_RE='^([a-zA-Z]+)(\(([^)]+)\))?(!)?: (.+)$'
+          if [[ "$MESSAGE" =~ $CONVENTIONAL_RE ]]; then
             TYPE="${BASH_REMATCH[1],,}"
             SCOPE="${BASH_REMATCH[3]}"
             IS_BREAKING="${BASH_REMATCH[4]}"
