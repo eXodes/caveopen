@@ -72,7 +72,7 @@ Skills read `SPEC.md` directly from disk on demand. No ambient spec context is i
 
 ### cavemem — persistent session memory
 
-A port of [cavemem](https://github.com/JuliusBrussee/cavemem) that bridges its SQLite memory store into OpenCode's plugin lifecycle. On each new session, prior-session summaries for the same working directory are fetched and injected into the system prompt. Tool calls and turn output are observed and stored as the session progresses, building a memory that carries context forward across sessions.
+A port of [cavemem](https://github.com/JuliusBrussee/cavemem) that bridges its SQLite memory store into OpenCode's plugin lifecycle. On each new session, prior-session summaries for the same working directory are fetched and injected into the system prompt. Tool calls and turn output are observed and stored as the session progresses, building a memory that carries context forward across sessions. Each session's directory comes from the SDK session object — subagent sessions get their own directory correctly, not the plugin process cwd.
 
 > [!NOTE]
 > Requires [cavemem](https://github.com/JuliusBrussee/cavemem) to be installed separately. The other two modules work without it. When cavemem is absent, this module silently no-ops.

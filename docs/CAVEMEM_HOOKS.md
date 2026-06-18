@@ -82,15 +82,33 @@ Only `session-start` and `user-prompt-submit` produce stdout. All other hooks st
 ## Hook 1 — Session Init (`session.created` → `session-start`)
 
 ```ts
+// Pending promises dedupe concurrent callers. cavemem uses INSERT OR IGNORE,
+// so whoever fires first wins. Without this, user-prompt-submit/post-tool-use
+// can trigger ensureSession() with ide:"unknown"/cwd:null before session-start
+// completes, permanently locking out the real values.
+const pending = new Map<string, Promise<void>>();
+
+export function initSession(sessionID: string, directory: string): Promise<void> {
+  if (hasSession(sessionID)) return Promise.resolve();
+  if (pending.has(sessionID)) return pending.get(sessionID)!;
+
+  const p = runCavememHook("session-start", {
+    session_id: sessionID,
+    ide: "opencode",
+    cwd: directory,
+  }).then((context) => {
+    setCachedContext(sessionID, context ?? "");
+    pending.delete(sessionID);
+  });
+
+  pending.set(sessionID, p);
+  return p;
+}
+
 event: async ({ event }) => {
   if (event.type !== "session.created") return;
-  const context = await runCavememHook("session-start", {
-    session_id: event.properties.info.id,
-    ide: "opencode",
-    cwd: process.cwd(),
-    // omit `source` — session.created is always a new session, never resume/clear/compact
-  });
-  setCachedContext(event.properties.info.id, context ?? "");
+  const { id, directory } = event.properties.info;
+  await initSession(id, directory ?? process.cwd());
 };
 ```
 
@@ -98,7 +116,7 @@ event: async ({ event }) => {
 
 **`source` guard:** The handler returns `''` when `source` is set and not `'startup'` (skips injection on resume/clear/compact). OpenCode `session.created` fires once per new session only — omitting `source` means the guard never trips and prior-session context is always returned.
 
-**`cwd`:** Pass `process.cwd()`. Without it the handler returns hints from all projects, not just the current one.
+**`cwd`:** Pass `event.properties.info.directory` (the session's actual directory from the SDK). This is critical for subagent sessions, which may have a different working directory than the plugin process. `process.cwd()` is only a fallback if the field is absent.
 
 **Inject via system transform** — cache the returned string on `session.created`, inject in `experimental.chat.system.transform`:
 
@@ -117,10 +135,23 @@ Never inject in `chat.message` — thrashes the last-2 KV-cache slots.
 
 ```ts
 'chat.message': async (input, output) => {
+  const sessionID = input.sessionID;
+  if (!sessionID) return;
+
+  // Guard: user-prompt-submit triggers ensureSession() in cavemem, which
+  // uses INSERT OR IGNORE with ide:"unknown"/cwd:null. If session-start
+  // hasn't completed yet, it wins and the real values are permanently blocked.
+  if (!hasSession(sessionID)) {
+    try {
+      const resp = await ctx.client.session.get({ path: { id: sessionID } });
+      await initSession(sessionID, resp.data?.directory ?? ctx.directory);
+    } catch { /* best-effort */ }
+  }
+
   const text = extractText(output.parts)   // join text-typed parts
   if (!text.trim()) return
   await runCavememHook('user-prompt-submit', {
-    session_id: input.sessionID,
+    session_id: sessionID,
     prompt: text,
   })
   // handler always returns '' — no output mutation needed
@@ -135,8 +166,21 @@ Pure write path. `additionalContext` is always empty — retrieval is MCP-driven
 
 ```ts
 'tool.execute.after': async (input, output) => {
+  const sessionID = input.sessionID;
+  if (!sessionID) return;
+
+  // Subagent sessions: tool.execute.after fires before session.created reaches
+  // the event handler. Same INSERT OR IGNORE race as chat.message — eagerly
+  // init with correct directory before post-tool-use adds any observation.
+  if (!hasSession(sessionID)) {
+    try {
+      const resp = await ctx.client.session.get({ path: { id: sessionID } });
+      await initSession(sessionID, resp.data?.directory ?? ctx.directory);
+    } catch { /* best-effort */ }
+  }
+
   await runCavememHook('post-tool-use', {
-    session_id: input.sessionID,
+    session_id: sessionID,
     tool_name: input.tool,
     tool_input: input.args,                         // available in-process; no .before capture needed
     tool_response: output.output ?? output.title,   // title fallback for tools with no text output
@@ -210,11 +254,12 @@ Prior-session context string is immutable after `session.created`. Never re-fetc
 
 ## CaveOpen vs Official OpenCode Installer
 
-| Feature                 | Official installer                      | CaveOpen                                                  |
-| ----------------------- | --------------------------------------- | --------------------------------------------------------- |
-| Invocation              | `Bun.spawn` detached (fire-and-forget)  | `Bun.spawn` awaited (same CLI, captures stdout)           |
-| User prompt observation | ❌ Not wired                            | ✅ `chat.message` → `cavemem hook run user-prompt-submit` |
-| Turn summaries          | ❌ `stop` receives no text → no-op      | ✅ SDK fetch on `session.idle` → `cavemem hook run stop`  |
-| Session rollup          | ❌ Not wired                            | ✅ `session.deleted` → `cavemem hook run session-end`     |
-| `cwd` scoping           | ❌ null → all-project hints             | ✅ `process.cwd()` → project-scoped hints                 |
-| `.before` arg capture   | ✅ Required (detached spawn loses args) | ❌ Not needed (args available in `.after`)                |
+| Feature                 | Official installer                      | CaveOpen                                                                        |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------- |
+| Invocation              | `Bun.spawn` detached (fire-and-forget)  | `Bun.spawn` awaited (same CLI, captures stdout)                                 |
+| User prompt observation | ❌ Not wired                            | ✅ `chat.message` → `cavemem hook run user-prompt-submit`                       |
+| Turn summaries          | ❌ `stop` receives no text → no-op      | ✅ SDK fetch on `session.idle` → `cavemem hook run stop`                        |
+| Session rollup          | ❌ Not wired                            | ✅ `session.deleted` → `cavemem hook run session-end`                           |
+| `cwd` scoping           | ❌ null → all-project hints             | ✅ `event.properties.info.directory` → correct per-session directory            |
+| Session init ordering   | N/A                                     | ✅ Promise dedup + eager init guards prevent `ensureSession("unknown")` race    |
+| `.before` arg capture   | ✅ Required (detached spawn loses args) | ❌ Not needed (args available in `.after`)                                      |

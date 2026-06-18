@@ -7,6 +7,32 @@ import {
   setCachedContext,
 } from "../lib/session-cache.js";
 
+// Pending promises prevent concurrent callers from racing to insert the session
+// record — cavemem uses INSERT OR IGNORE, so whoever fires first wins. Without
+// this, user-prompt-submit/post-tool-use can trigger ensureSession() with
+// ide:"unknown"/cwd:null before session-start completes.
+const pending = new Map<string, Promise<void>>();
+
+export function initSession(
+  sessionID: string,
+  directory: string,
+): Promise<void> {
+  if (hasSession(sessionID)) return Promise.resolve();
+  if (pending.has(sessionID)) return pending.get(sessionID)!;
+
+  const p = runCavememHook("session-start", {
+    session_id: sessionID,
+    ide: "opencode",
+    cwd: directory,
+  }).then((context) => {
+    setCachedContext(sessionID, context ?? "");
+    pending.delete(sessionID);
+  });
+
+  pending.set(sessionID, p);
+  return p;
+}
+
 export async function handleSessionCreated(
   event: Event,
   ctx: PluginInput,
@@ -16,15 +42,7 @@ export async function handleSessionCreated(
   const sessionID = event.properties.info.id;
   if (!sessionID) return;
 
-  if (hasSession(sessionID)) return;
-
-  const context = await runCavememHook("session-start", {
-    session_id: sessionID,
-    ide: "opencode",
-    cwd: process.cwd(),
-  });
-
-  setCachedContext(sessionID, context ?? "");
+  await initSession(sessionID, event.properties.info.directory ?? process.cwd());
 }
 
 export function systemTransformHook(

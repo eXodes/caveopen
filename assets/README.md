@@ -59,14 +59,14 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each hook spawns the CLI, writes a JSON payload to stdin, and reads structured output from stdout. Requires `cavemem` installed separately — all hooks silently no-op if the CLI is absent.
 
-| Hook                                 | Trigger              | What it does                                                                                                                         |
-| ------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]`                                           |
-| `chat.message`                       | User submits message | Fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation)                           |
-| `tool.execute.after`                 | Any tool completes   | Fires `cavemem hook run post-tool-use` with tool name, input, and output (both truncated to 2000 chars)                              |
-| `event` (`session.created`)          | New session opened   | Fires `cavemem hook run session-start` with session ID + cwd; caches returned prior-session context string for system prompt inject  |
-| `event` (`session.idle`)             | Session goes idle    | Fetches last assistant message via SDK; fires `cavemem hook run stop` with that text as `last_assistant_message`                     |
-| `event` (`session.deleted`)          | Session deleted      | Fires `cavemem hook run session-end`; evicts session from in-process context cache                                                   |
+| Hook                                 | Trigger              | What it does                                                                                                                                                            |
+| ------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]`                                                                              |
+| `chat.message`                       | User submits message | Ensures session is initialized (eager init guard), then fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation)      |
+| `tool.execute.after`                 | Any tool completes   | Ensures session is initialized (eager init guard for subagent sessions), then fires `cavemem hook run post-tool-use` with tool name, input, and output                  |
+| `event` (`session.created`)          | New session opened   | Fires `cavemem hook run session-start` with session ID + session directory; caches returned prior-session context string for system prompt inject                       |
+| `event` (`session.idle`)             | Session goes idle    | Fetches last assistant message via SDK; fires `cavemem hook run stop` with that text as `last_assistant_message`                                                        |
+| `event` (`session.deleted`)          | Session deleted      | Fires `cavemem hook run session-end`; evicts session from in-process context cache                                                                                      |
 
 ### Hook composition
 
