@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
-import { log } from "node:console";
+import { partId } from "../../../lib/cuid.js";
 
 export function commandExecuteBeforeHook(
   ctx: PluginInput,
@@ -23,13 +23,25 @@ export function commandExecuteBeforeHook(
           return `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`;
         })();
 
-    output.parts.splice(0, output.parts.length, {
-      id: output.parts[0].id,
-      messageID: output.parts[0].messageID,
-      sessionID: input.sessionID,
-      type: "text",
-      text,
-      ignored: true,
-    });
+    output.parts.splice(
+      0,
+      output.parts.length,
+      {
+        id: output.parts[0].id,
+        messageID: output.parts[0].messageID,
+        sessionID: input.sessionID,
+        type: "text",
+        text,
+        ignored: true,
+      },
+      {
+        id: partId(),
+        messageID: output.parts[0].messageID,
+        sessionID: input.sessionID,
+        type: "text",
+        text: "FORMAT.md copied, no futher action.",
+        synthetic: true,
+      },
+    );
   };
 }

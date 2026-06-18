@@ -152,7 +152,7 @@ Each module registers TypeScript hooks into OpenCode's plugin lifecycle. The thr
 ```
 CaveOpenPlugin
   ├── caveman  → experimental.chat.system.transform, chat.message, command.execute.before, event
-  ├── cavekit  → experimental.chat.messages.transform, command.execute.before, config
+  ├── cavekit  → command.execute.before, config
   └── cavemem  → experimental.chat.system.transform, chat.message, tool.execute.after, event, dispose
 ```
 

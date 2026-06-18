@@ -21,43 +21,43 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 Ensures `FORMAT.md` exists at project root. No args. CLI install already handles the global case — this hook only concerns the current project.
 
-**Pattern: mutate `output.parts` with `ignored: true` + `experimental.chat.messages.transform` command check**
+**Pattern: two parts — `ignored: true` (user-visible result) + `synthetic: true` (no-LLM signal)**
 
-Two hooks in concert — no shared state needed:
+Single hook, no `messages.transform`:
 
-1. `command.execute.before` — copies file, replaces `output.parts` with a single `{ type: "text", ignored: true }` part containing the result message. This surfaces output in the TUI without LLM inference.
-2. `experimental.chat.messages.transform` — if the last user message text is `/ck:init`, empties `output.messages` → LLM inference skipped entirely.
+`command.execute.before` copies the file, then replaces `output.parts` with two entries:
+1. `{ type: "text", ignored: true }` — the result message, shown in the TUI, excluded from LLM context.
+2. `{ type: "text", synthetic: true }` — signals to OpenCode that the command produced its own response and no LLM reply is needed.
 
 **`hooks/command.ts`:**
 
 ```ts
-output.parts.splice(0, output.parts.length, {
-  id: output.parts[0].id,
-  messageID: output.parts[0].messageID,
-  sessionID: input.sessionID,
-  type: "text",
-  text,          // "FORMAT.md copied to ..." or "FORMAT.md already exists at ..."
-  ignored: true,
-});
+output.parts.splice(
+  0,
+  output.parts.length,
+  {
+    id: output.parts[0].id,
+    messageID: output.parts[0].messageID,
+    sessionID: input.sessionID,
+    type: "text",
+    text,          // "FORMAT.md copied to ..." or "FORMAT.md already exists at ..."
+    ignored: true,
+  },
+  {
+    id: partId(),
+    messageID: output.parts[0].messageID,
+    sessionID: input.sessionID,
+    type: "text",
+    text: "FORMAT.md copied, no further action.",
+    synthetic: true,
+  },
+);
 ```
 
 Source path: `path.join(__dirname, "../assets/FORMAT.md")` — bundled alongside the plugin.
 
-**`hooks/messages-transform.ts`:**
-
-```ts
-"experimental.chat.messages.transform": async (_input, output) => {
-  const last = output.messages.at(-1);
-  if (!last || last.info.role !== "user") return;
-
-  const isInit = last.parts.some(
-    (p) => p.type === "text" && (p as TextPart).text.trim() === "/ck:init",
-  );
-  if (!isInit) return;
-
-  output.messages = []; // drop /ck:init → no LLM inference
-},
-```
+> **Why not `experimental.chat.messages.transform`?**
+> An earlier design used that hook to set `output.messages = []`, intending to skip LLM inference entirely. This caused provider error 2013 (`messages must not be empty`) because OpenCode still dispatches the LLM call after the transform. Tracked upstream as [anomalyco/opencode#9306](https://github.com/anomalyco/opencode/issues/9306) — when `noReply` lands, the `synthetic` part can be removed.
 
 **No caching impact.** File copy is a pure side effect — no model context mutated.
 
@@ -111,7 +111,7 @@ export const CaveOpenPlugin: Plugin = async (ctx) =>
   mergeHooks(cavemanHooks(ctx), caveMemHooks(ctx), cavekitHooks(ctx));
 ```
 
-Cavekit no longer contributes a `system.transform` or `event` handler, so merging is simpler — only `command.execute.before`, `experimental.chat.messages.transform`, and `config` come from this module.
+Cavekit no longer contributes a `system.transform` or `event` handler, so merging is simpler — only `command.execute.before` and `config` come from this module.
 
 ---
 
@@ -121,8 +121,7 @@ Cavekit no longer contributes a `system.transform` or `event` handler, so mergin
 src/modules/cavekit/
   index.ts                      # cavekitHooks(ctx) factory — composes all hooks
   hooks/
-    command.ts                  # command.execute.before: /ck:init copy FORMAT.md + noReply
-    messages-transform.ts       # experimental.chat.messages.transform: drop /ck:init turn
+    command.ts                  # command.execute.before: /ck:init copy FORMAT.md + synthetic part
     set-config.ts               # config hook: registers /ck:init as named slash command
 ```
 
