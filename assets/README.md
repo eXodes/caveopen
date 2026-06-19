@@ -40,7 +40,7 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 | Hook                                 | Trigger                   | What it does                                                                                                                                                                                                                        |
 | ------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `chat.message`                       | User submits a message    | Parses `/caveman [lite\|full\|ultra\|wenyan-*\|off]` and natural-language phrases; writes mode flag to disk; appends per-turn reminder nudge to `output.parts` when mode is active (skipped for `commit`/`review`/`compress` modes) |
+| `chat.message`                       | User submits a message    | Parses `/caveman [lite\|full\|ultra\|wenyan-*\|off]` and natural-language activation/deactivation phrases; writes or removes mode flag on disk; no output mutation (ruleset injected via system transform on every inference instead) |
 | `command.execute.before`             | `/caveman-stats` command  | Fetches live session token counts via client API; formats stats. Accepts `--all` (lifetime history) and `--since Nd` (last N days) flags; pushes text part into output                                                              |
 | `event` (`session.created`)          | New session opened        | Reads `defaultMode` from config; writes mode flag if none set and default is not `off`                                                                                                                                              |
 | `event` (`session.idle`)             | Session goes idle         | Fetches session token counts; computes estimated saved tokens/USD; appends JSONL row to `~/.caveman/.caveman-history.jsonl`; writes statusline suffix                                                                               |
@@ -50,11 +50,10 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 ### cavekit
 
-| Hook                                      | Trigger                | What it does                                                                                                                 |
-| ----------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `command.execute.before`                  | `/ck:init` command     | Copies `FORMAT.md` to `process.cwd()`; skips if already present; injects result text into output parts as an ignored part   |
-| `experimental.chat.messages.transform`    | Every user message     | If last message is `/ck:init`, empties `output.messages` to suppress LLM inference (output already handled by hook above)   |
-| `config`                                  | Plugin load            | Registers `/ck:init` as a named slash command in the TUI command palette                                                     |
+| Hook                                      | Trigger                | What it does                                                                                                                                                                   |
+| ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `command.execute.before`                  | `/ck:init` command     | Copies `FORMAT.md` to `process.cwd()`; skips if already present; replaces `output.parts` with an `ignored` result part + `synthetic` no-reply part to suppress LLM inference |
+| `config`                                  | Plugin load            | Registers `/ck:init` as a named slash command in the TUI command palette                                                                                                       |
 
 > **No system prompt injection.** Skills (`/ck:spec`, `/ck:build`, `/ck:check`) read `SPEC.md` directly from disk. Passive injection of spec context was removed — it caused hallucination on unrelated prompts.
 
@@ -70,7 +69,7 @@ Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each h
 | `event` (`session.idle`)             | Session goes idle    | Fetches last assistant message via SDK; fires `cavemem hook run stop` with that text as `last_assistant_message`                                                        |
 | `event` (`session.deleted`)          | Session deleted      | Fires `cavemem hook run session-end`; evicts session from in-process context cache                                                                                      |
 
-> **`experimental.chat.system.transform`** — cavemem's individual handler is still registered by `caveMemHooks()` but is replaced inside `CaveOpenPlugin` by `combinedSystemTransform`. `getCavememSystemSessionCache()` is passed as a provider; when `skipPriorContext: true` it returns `null` and no content is pushed. The standalone `CavememPlugin` (subpath import) still uses its own transform.
+> **`experimental.chat.system.transform`** — cavemem's individual handler is still registered by `caveMemHooks()` but is replaced inside `CaveOpenPlugin` by `combinedSystemTransform`. `getCavememSystemPriorContext()` is passed as a provider; when `skipPriorContext: true` it returns `null` and no content is pushed. The standalone `CavememPlugin` (subpath import) still uses its own transform.
 
 ### Hook composition
 
@@ -78,7 +77,7 @@ Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each h
 CaveOpenPlugin
   ├── cavemanHooks(ctx)  → chat.message, command.execute.before, event
   ├── caveMemHooks(ctx)  → chat.message, tool.execute.after, event
-  ├── cavekitHooks(ctx)  → messages.transform, command.execute.before, config
+  ├── cavekitHooks(ctx)  → command.execute.before, config
   └── combinedSystemTransform([cavemanProvider, cavememProvider])
         → experimental.chat.system.transform  (replaces individual handlers post-merge)
 

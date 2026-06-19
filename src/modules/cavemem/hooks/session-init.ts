@@ -6,7 +6,7 @@ import {
   getCachedContext,
   hasSession,
   setCachedContext,
-} from "../lib/session-cache.js";
+} from "../lib/context.js";
 
 // Pending promises prevent concurrent callers from racing to insert the session
 // record — cavemem uses INSERT OR IGNORE, so whoever fires first wins. Without

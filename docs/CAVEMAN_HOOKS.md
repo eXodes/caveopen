@@ -78,6 +78,7 @@ event: async ({ event }) => {
 **Why separate from Hook 1a:** The flag file is mutable runtime state — `/caveman <level>` commands update it mid-session. Hook 1a (`experimental.chat.system.transform`) reads the flag to know the current mode. Hook 1b initializes it at session start so the flag reflects the configured default before any command fires.
 
 **Flag consumers:**
+
 - `experimental.chat.system.transform` — reads current mode to select ruleset
 - `chat.message` — reads current mode after `/caveman` switches
 - `tui.prompt.append` — reads current mode to render badge
@@ -300,12 +301,12 @@ event: async ({ event }) => {
 
 Caveman injects content at multiple points. Each must be safe for OpenCode's two-layer caching.
 
-| Injection point               | Hook                                      | Cache behavior                                                        | Safe?                                         |
-| ----------------------------- | ----------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------- |
-| Full caveman ruleset          | `experimental.chat.system.transform`      | `push` → `system[1]` (after host instructions) → cached              | ✅ Cached, no repeat cost                     |
-| Stats output                  | `command.execute.before` → `output.parts` | User-turn message; one-shot, not repeated                             | ✅ No cache impact                            |
-| Session activation flag write | `session.created` event                   | No model context — pure side effect                                   | ✅ No cache impact                            |
-| History write                 | `session.idle` event                      | No model context — pure side effect                                   | ✅ No cache impact                            |
+| Injection point               | Hook                                      | Cache behavior                                          | Safe?                     |
+| ----------------------------- | ----------------------------------------- | ------------------------------------------------------- | ------------------------- |
+| Full caveman ruleset          | `experimental.chat.system.transform`      | `push` → `system[1]` (after host instructions) → cached | ✅ Cached, no repeat cost |
+| Stats output                  | `command.execute.before` → `output.parts` | User-turn message; one-shot, not repeated               | ✅ No cache impact        |
+| Session activation flag write | `session.created` event                   | No model context — pure side effect                     | ✅ No cache impact        |
+| History write                 | `session.idle` event                      | No model context — pure side effect                     | ✅ No cache impact        |
 
 **Key rules from CACHING.md:**
 
@@ -375,32 +376,67 @@ export function cavemanHooks(ctx: PluginInput): Hooks {
 
 ```ts
 // src/caveopen.ts
-import type { Plugin } from "@opencode-ai/plugin";
+import type { Plugin, PluginOptions } from "@opencode-ai/plugin";
 import { cavemanHooks } from "./modules/caveman/index.js";
 import { cavekitHooks } from "./modules/cavekit/index.js";
 import { caveMemHooks } from "./modules/cavemem/index.js";
 import { mergeHooks } from "./lib/merge-hooks.js";
+import {
+  combinedSystemTransform,
+  type SystemContentProvider,
+} from "./hooks/system-transform.js";
+import { getCavemanSystemRuleset } from "./modules/caveman/lib/ruleset.js";
+import { getCavememSystemPriorContext } from "./modules/cavemem/lib/context.js";
 
 export type CaveOpenMode = "caveman" | "cavekit" | "cavemem";
 
+export interface CaveOpenOptions extends PluginOptions {
+  modes?: CaveOpenMode[];
+  cavemem?: { skipPriorContext?: boolean };
+}
+
 const ALL_MODES: CaveOpenMode[] = ["caveman", "cavekit", "cavemem"];
 
-export const CaveOpenPlugin: Plugin = async (ctx, options) => {
+export const CaveOpenPlugin: Plugin = async (
+  ctx,
+  options: CaveOpenOptions | undefined,
+) => {
+  const opts = options ?? {};
   const modes: CaveOpenMode[] =
-    Array.isArray(options?.modes) ?
-      (options.modes as string[]).filter((m): m is CaveOpenMode =>
+    Array.isArray(opts.modes) ?
+      opts.modes.filter((m): m is CaveOpenMode =>
         ALL_MODES.includes(m as CaveOpenMode),
       )
     : ALL_MODES;
 
   const hookSets = [
     modes.includes("caveman") && cavemanHooks(ctx),
-    modes.includes("cavemem") && caveMemHooks(ctx),
+    modes.includes("cavemem") && caveMemHooks(ctx, opts.cavemem),
     modes.includes("cavekit") && cavekitHooks(ctx),
   ].filter(Boolean) as Parameters<typeof mergeHooks>;
 
-  return mergeHooks(...hookSets);
+  const merged = mergeHooks(...hookSets);
+
+  // Replace individual system.transform handlers with a single combined push.
+  // Keeps ruleset + priorContext in one system[] slot — both stay within
+  // applyCaching()'s 2-slot window instead of spilling to system[2].
+  const providers: SystemContentProvider[] = [];
+  if (modes.includes("caveman")) {
+    providers.push((sessionID) => getCavemanSystemRuleset());
+  }
+  if (modes.includes("cavemem")) {
+    const skipPriorContext = opts.cavemem?.skipPriorContext ?? false;
+    providers.push((sessionID) =>
+      getCavememSystemPriorContext(sessionID, { skipPriorContext }),
+    );
+  }
+  if (providers.length > 0) {
+    (merged as Record<string, unknown>)["experimental.chat.system.transform"] =
+      combinedSystemTransform(providers);
+  }
+
+  return merged;
 };
 ```
 
-`options.modes` lets callers selectively enable modules, e.g. `{ modes: ["caveman"] }`. Defaults to all three.
+`opts.modes` lets callers selectively enable modules, e.g. `{ modes: ["caveman"] }`. Defaults to all three. Inactive modules are omitted from `hookSets` entirely and their providers are never added — zero per-turn cost.

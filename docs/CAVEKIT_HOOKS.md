@@ -8,10 +8,10 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 ## Source Mapping
 
-| Claude Code hook / command           | Role                                        | OpenCode equivalent                                                 |
-| ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------- |
-| `/ck:init` (UserPromptSubmit detect) | Ensure `FORMAT.md` at project root          | `command.execute.before`                                            |
-| `/ck:spec`, `/ck:build`, `/ck:check` | Skill invocations (skill-level, not hooks)  | Skills read `FORMAT.md` and `SPEC.md` from project root — no hook needed |
+| Claude Code hook / command           | Role                                       | OpenCode equivalent                                                      |
+| ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `/ck:init` (UserPromptSubmit detect) | Ensure `FORMAT.md` at project root         | `command.execute.before`                                                 |
+| `/ck:spec`, `/ck:build`, `/ck:check` | Skill invocations (skill-level, not hooks) | Skills read `FORMAT.md` and `SPEC.md` from project root — no hook needed |
 
 ---
 
@@ -26,6 +26,7 @@ Ensures `FORMAT.md` exists at project root. No args. CLI install already handles
 Single hook, no `messages.transform`:
 
 `command.execute.before` copies the file, then replaces `output.parts` with two entries:
+
 1. `{ type: "text", ignored: true }` — the result message, shown in the TUI, excluded from LLM context.
 2. `{ type: "text", synthetic: true }` — signals to OpenCode that the command produced its own response and no LLM reply is needed.
 
@@ -40,7 +41,7 @@ output.parts.splice(
     messageID: output.parts[0].messageID,
     sessionID: input.sessionID,
     type: "text",
-    text,          // "FORMAT.md copied to ..." or "FORMAT.md already exists at ..."
+    text, // "FORMAT.md copied to ..." or "FORMAT.md already exists at ..."
     ignored: true,
   },
   {
@@ -106,12 +107,19 @@ export function mergeHooks(...hookSets: Partial<Hooks>[]): Hooks {
 ```
 
 ```ts
-// src/caveopen.ts
-export const CaveOpenPlugin: Plugin = async (ctx) =>
-  mergeHooks(cavemanHooks(ctx), caveMemHooks(ctx), cavekitHooks(ctx));
+// src/caveopen.ts (simplified — actual impl also wires combinedSystemTransform)
+const merged = mergeHooks(
+  cavemanHooks(ctx),
+  caveMemHooks(ctx, opts.cavemem),
+  cavekitHooks(ctx),
+);
+// post-assign replaces individual system.transform handlers with one combined push
+(merged as Record<string, unknown>)["experimental.chat.system.transform"] =
+  combinedSystemTransform(providers);
+return merged;
 ```
 
-Cavekit no longer contributes a `system.transform` or `event` handler, so merging is simpler — only `command.execute.before` and `config` come from this module.
+Cavekit contributes only `command.execute.before` and `config` — no `system.transform` or `event` collision.
 
 ---
 
@@ -133,10 +141,11 @@ config: async (config) => {
     ...config.command,
     "ck:init": {
       template: "/ck:init",
-      description: "Copy FORMAT.md (the SPEC.md schema) to the current project root",
+      description:
+        "Copy FORMAT.md (the SPEC.md schema) to the current project root",
     },
   };
-}
+};
 ```
 
 ---

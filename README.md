@@ -25,6 +25,11 @@ The CLI patches your `opencode.json`, copies skills, commands, and agents into t
 ✓ added        15 skills
 ✓ added        13 commands
 ✓ added        3 agents
+
+caveopen configured
+  Modes:  caveman, cavekit, cavemem
+  Config: ~/.config/opencode/opencode.json
+  Run:    opencode
 ```
 
 **Options**
@@ -139,8 +144,8 @@ Three compressed-output subagents available inside OpenCode sessions:
 }
 ```
 
-| Option            | Type    | Default | Description                                                                                                     |
-| ----------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| Option             | Type    | Default | Description                                                                                                        |
+| ------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------ |
 | `skipPriorContext` | boolean | `false` | Skip injecting prior-session summaries into the system prompt. Observations are still written to the memory store. |
 
 `skipPriorContext` is a workaround for a known upstream bug in cavemem ≤ 0.2.1 where prior-session context is not scoped to the current working directory and leaks across unrelated projects ([cavemem#39](https://github.com/JuliusBrussee/cavemem/issues/39)). Setting it to `true` disables injection until a fixed version of cavemem is installed.

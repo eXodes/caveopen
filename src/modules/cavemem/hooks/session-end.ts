@@ -1,7 +1,7 @@
 import type { Event } from "@opencode-ai/sdk";
 import type { PluginInput } from "@opencode-ai/plugin";
 import { runCavememHook } from "../lib/runner.js";
-import { deleteCachedContext } from "../lib/session-cache.js";
+import { deleteCachedContext } from "../lib/context.js";
 
 export async function handleSessionDeleted(
   event: Event,

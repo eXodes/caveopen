@@ -8,7 +8,7 @@ import {
   type SystemContentProvider,
 } from "./hooks/system-transform.js";
 import { getCavemanSystemRuleset } from "./modules/caveman/lib/ruleset.js";
-import { getCavememSystemSessionCache } from "./modules/cavemem/lib/session-cache.js";
+import { getCavememSystemPriorContext } from "./modules/cavemem/lib/context.js";
 
 export type CaveOpenMode = "caveman" | "cavekit" | "cavemem";
 
@@ -64,7 +64,7 @@ export const CaveOpenPlugin: Plugin = async (
   if (modes.includes("cavemem")) {
     const skipPriorContext = opts.cavemem?.skipPriorContext ?? false;
     providers.push((sessionID) =>
-      getCavememSystemSessionCache(sessionID, { skipPriorContext }),
+      getCavememSystemPriorContext(sessionID, { skipPriorContext }),
     );
   }
 

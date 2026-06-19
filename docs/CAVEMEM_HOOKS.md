@@ -69,13 +69,13 @@ Only `session-start` and `user-prompt-submit` produce stdout. All other hooks st
 
 ## Hook Mapping
 
-| OpenCode hook                     | cavemem hook name    | Stdin payload fields                                     | Returns context?                                      |
-| --------------------------------- | -------------------- | -------------------------------------------------------- | ----------------------------------------------------- |
+| OpenCode hook                     | cavemem hook name    | Stdin payload fields                                     | Returns context?                                            |
+| --------------------------------- | -------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
 | `event: session.created`          | `session-start`      | `session_id`, `ide`, `cwd`                               | ✅ prior-session context (suppressed by `skipPriorContext`) |
-| `chat.message`                    | `user-prompt-submit` | `session_id`, `prompt`                                   | ✅ (always `''`)                                      |
-| `tool.execute.after`              | `post-tool-use`      | `session_id`, `tool_name`, `tool_input`, `tool_response` | ❌                                                    |
-| `event: session.idle` + SDK fetch | `stop`               | `session_id`, `last_assistant_message`                   | ❌                                                    |
-| `event: session.deleted`          | `session-end`        | `session_id`                                             | ❌                                                    |
+| `chat.message`                    | `user-prompt-submit` | `session_id`, `prompt`                                   | ✅ (always `''`)                                            |
+| `tool.execute.after`              | `post-tool-use`      | `session_id`, `tool_name`, `tool_input`, `tool_response` | ❌                                                          |
+| `event: session.idle` + SDK fetch | `stop`               | `session_id`, `last_assistant_message`                   | ❌                                                          |
+| `event: session.deleted`          | `session-end`        | `session_id`                                             | ❌                                                          |
 
 ---
 
@@ -88,7 +88,10 @@ Only `session-start` and `user-prompt-submit` produce stdout. All other hooks st
 // completes, permanently locking out the real values.
 const pending = new Map<string, Promise<void>>();
 
-export function initSession(sessionID: string, directory: string): Promise<void> {
+export function initSession(
+  sessionID: string,
+  directory: string,
+): Promise<void> {
   if (hasSession(sessionID)) return Promise.resolve();
   if (pending.has(sessionID)) return pending.get(sessionID)!;
 
@@ -233,7 +236,7 @@ event: async ({ event }) => {
   if (!sessionID) return;
 
   await runCavememHook("session-end", { session_id: sessionID });
-  deleteCachedContext(sessionID); // evict from in-process session-cache
+  deleteCachedContext(sessionID); // evict from in-process context
 };
 ```
 
@@ -245,32 +248,32 @@ The handler rolls up all `scope: 'turn'` summaries into a `scope: 'session'` sum
 
 ## Caching Safety
 
-| Injection point         | Hook                                      | Cache behavior                                                                      |
-| ----------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
-| Prior-session context   | `experimental.chat.system.transform`      | `push` → `system[2]` (after instructions + ruleset) → uncached; turn 1 cost only   |
-| User prompt observation | `chat.message` (write only)               | No model context mutation                                                           |
-| Tool observation        | `tool.execute.after` (write only)         | No model context mutation                                                           |
-| Turn summary            | `session.idle` (write only)               | No model context mutation                                                           |
-| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                                                           |
+| Injection point         | Hook                                      | Cache behavior                                                                   |
+| ----------------------- | ----------------------------------------- | -------------------------------------------------------------------------------- |
+| Prior-session context   | `experimental.chat.system.transform`      | `push` → `system[2]` (after instructions + ruleset) → uncached; turn 1 cost only |
+| User prompt observation | `chat.message` (write only)               | No model context mutation                                                        |
+| Tool observation        | `tool.execute.after` (write only)         | No model context mutation                                                        |
+| Turn summary            | `session.idle` (write only)               | No model context mutation                                                        |
+| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                                                        |
 
 Prior-session context string is immutable after `session.created`. Never re-fetch or mutate mid-session.
 
 **Slot assignment with all plugins loaded** (`applyCaching()` marks `system[0..1]`):
 
-| Slot | Content | Cached? | Rationale |
-| ---- | ------- | ------- | --------- |
-| `system[0]` | OpenCode concatenated instructions | ✅ | Largest block, host-owned, always first |
-| `system[1]` | caveman ruleset (`push`) | ✅ | Behavioral modifier, medium size |
-| `system[2]` | cavemem priorContext (`push`) | ❌ | Background context, immutable, one-time cost |
+| Slot        | Content                            | Cached? | Rationale                                    |
+| ----------- | ---------------------------------- | ------- | -------------------------------------------- |
+| `system[0]` | OpenCode concatenated instructions | ✅      | Largest block, host-owned, always first      |
+| `system[1]` | caveman ruleset (`push`)           | ✅      | Behavioral modifier, medium size             |
+| `system[2]` | cavemem priorContext (`push`)      | ❌      | Background context, immutable, one-time cost |
 
 When `opencode-claude-auth` is loaded (injects identity via `unshift`):
 
-| Slot | Content | Cached? |
-| ---- | ------- | ------- |
-| `system[0]` | oca identity (`unshift`) | ✅ |
-| `system[1]` | OpenCode instructions | ✅ |
-| `system[2]` | caveman ruleset | ❌ |
-| `system[3]` | cavemem priorContext | ❌ |
+| Slot        | Content                  | Cached? |
+| ----------- | ------------------------ | ------- |
+| `system[0]` | oca identity (`unshift`) | ✅      |
+| `system[1]` | OpenCode instructions    | ✅      |
+| `system[2]` | caveman ruleset          | ❌      |
+| `system[3]` | cavemem priorContext     | ❌      |
 
 Identity + instructions stay cached. CaveOpen additions fall outside the window — acceptable given their relative size and the priority of auth + host instructions.
 
@@ -278,12 +281,12 @@ Identity + instructions stay cached. CaveOpen additions fall outside the window 
 
 ## CaveOpen vs Official OpenCode Installer
 
-| Feature                 | Official installer                      | CaveOpen                                                                        |
-| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------- |
-| Invocation              | `Bun.spawn` detached (fire-and-forget)  | `Bun.spawn` awaited (same CLI, captures stdout)                                 |
-| User prompt observation | ❌ Not wired                            | ✅ `chat.message` → `cavemem hook run user-prompt-submit`                       |
-| Turn summaries          | ❌ `stop` receives no text → no-op      | ✅ SDK fetch on `session.idle` → `cavemem hook run stop`                        |
-| Session rollup          | ❌ Not wired                            | ✅ `session.deleted` → `cavemem hook run session-end`                           |
-| `cwd` scoping           | ❌ null → all-project hints             | ✅ `event.properties.info.directory` → correct per-session directory            |
-| Session init ordering   | N/A                                     | ✅ Promise dedup + eager init guards prevent `ensureSession("unknown")` race    |
-| `.before` arg capture   | ✅ Required (detached spawn loses args) | ❌ Not needed (args available in `.after`)                                      |
+| Feature                 | Official installer                      | CaveOpen                                                                     |
+| ----------------------- | --------------------------------------- | ---------------------------------------------------------------------------- |
+| Invocation              | `Bun.spawn` detached (fire-and-forget)  | `Bun.spawn` awaited (same CLI, captures stdout)                              |
+| User prompt observation | ❌ Not wired                            | ✅ `chat.message` → `cavemem hook run user-prompt-submit`                    |
+| Turn summaries          | ❌ `stop` receives no text → no-op      | ✅ SDK fetch on `session.idle` → `cavemem hook run stop`                     |
+| Session rollup          | ❌ Not wired                            | ✅ `session.deleted` → `cavemem hook run session-end`                        |
+| `cwd` scoping           | ❌ null → all-project hints             | ✅ `event.properties.info.directory` → correct per-session directory         |
+| Session init ordering   | N/A                                     | ✅ Promise dedup + eager init guards prevent `ensureSession("unknown")` race |
+| `.before` arg capture   | ✅ Required (detached spawn loses args) | ❌ Not needed (args available in `.after`)                                   |

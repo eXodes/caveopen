@@ -1,6 +1,6 @@
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
 import { runCavememHook } from "../lib/runner.js";
-import { hasSession } from "../lib/session-cache.js";
+import { hasSession } from "../lib/context.js";
 import { initSession } from "./session-init.js";
 
 export function toolExecuteAfterHook(

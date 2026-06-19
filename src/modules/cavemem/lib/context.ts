@@ -1,5 +1,3 @@
-import { CaveOpenOptions } from "../../../caveopen.js";
-
 const cache = new Map<string, string>();
 
 export function getCachedContext(sessionID: string): string | undefined {
@@ -23,9 +21,9 @@ export function hasSession(sessionID: string): boolean {
  * Used by caveopen.ts to build the combined system.transform provider.
  * Empty string context (session initialized but no prior summaries) → null (no push).
  */
-export function getCavememSystemSessionCache(
+export function getCavememSystemPriorContext(
   sessionID: string | undefined,
-  options?: CaveOpenOptions["cavemem"],
+  options?: { skipPriorContext?: boolean },
 ): string | null {
   if (options?.skipPriorContext) return null;
   if (!sessionID) return null;

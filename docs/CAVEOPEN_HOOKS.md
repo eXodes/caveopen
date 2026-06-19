@@ -6,11 +6,11 @@ Documents cross-module hook composition in `src/caveopen.ts` — where caveman, 
 
 ## Module Hook Inventory
 
-| Module  | `experimental.chat.system.transform` | `event`                                    | `chat.message` | `tool.execute.after` | `command.execute.before` | `config` |
-| ------- | ------------------------------------ | ------------------------------------------ | -------------- | -------------------- | ------------------------ | -------- |
-| caveman | ✅ push ruleset                      | `session.created`, `session.idle`, TUI     | ✅ mode track  | —                    | ✅ `/caveman-stats`      | —        |
-| cavemem | ✅ push priorContext                 | `session.created`, `session.idle`, `session.deleted` | ✅ write-only | ✅ post-tool-use     | —                        | —        |
-| cavekit | —                                    | —                                          | —              | —                    | ✅ `/ck:init`            | ✅       |
+| Module  | `experimental.chat.system.transform` | `event`                                              | `chat.message` | `tool.execute.after` | `command.execute.before` | `config` |
+| ------- | ------------------------------------ | ---------------------------------------------------- | -------------- | -------------------- | ------------------------ | -------- |
+| caveman | ✅ push ruleset                      | `session.created`, `session.idle`, TUI               | ✅ mode track  | —                    | ✅ `/caveman-stats`      | —        |
+| cavemem | ✅ push priorContext                 | `session.created`, `session.idle`, `session.deleted` | ✅ write-only  | ✅ post-tool-use     | —                        | —        |
+| cavekit | —                                    | —                                                    | —              | —                    | ✅ `/ck:init`            | ✅       |
 
 Two hooks collide across modules: `experimental.chat.system.transform` (caveman + cavemem) and `event` (caveman + cavemem). `mergeHooks` handles `event` correctly by sequencing — both handlers run in order. `command.execute.before` has no collision (each module intercepts by command name).
 
@@ -30,11 +30,11 @@ turn N:
 
 `applyCaching()` marks `system[0..1]` only. Result:
 
-| Slot        | Content                  | Cached? |
-| ----------- | ------------------------ | ------- |
-| `system[0]` | host instructions        | ✅      |
-| `system[1]` | caveman ruleset          | ✅      |
-| `system[2]` | cavemem priorContext     | ❌      |
+| Slot        | Content              | Cached? |
+| ----------- | -------------------- | ------- |
+| `system[0]` | host instructions    | ✅      |
+| `system[1]` | caveman ruleset      | ✅      |
+| `system[2]` | cavemem priorContext | ❌      |
 
 priorContext is immutable after `session.created` — same bytes every turn — but it always misses because it sits at `system[2]`. Wasted re-tokenization every turn for content that never changes.
 
@@ -101,8 +101,8 @@ export function getCavemanSystemRuleset(): string | null {
 ```
 
 ```ts
-// src/modules/cavemem/lib/session-cache.ts
-export function getCavememSystemSessionCache(
+// src/modules/cavemem/lib/context.ts
+export function getCavememSystemPriorContext(
   sessionID: string | undefined,
   options?: { skipPriorContext?: boolean },
 ): string | null {
@@ -120,7 +120,9 @@ export function getCavememSystemSessionCache(
 // src/hooks/system-transform.ts
 import type { Hooks } from "@opencode-ai/plugin";
 
-export type SystemContentProvider = (sessionID: string | undefined) => string | null;
+export type SystemContentProvider = (
+  sessionID: string | undefined,
+) => string | null;
 
 export function combinedSystemTransform(
   providers: SystemContentProvider[],
@@ -147,7 +149,7 @@ Module selection happens here — providers are only added to the array when the
 // src/caveopen.ts
 import { combinedSystemTransform, type SystemContentProvider } from "./hooks/system-transform.js";
 import { getCavemanSystemRuleset } from "./modules/caveman/lib/ruleset.js";
-import { getCavememSystemSessionCache } from "./modules/cavemem/lib/session-cache.js";
+import { getCavememSystemPriorContext } from "./modules/cavemem/lib/context.js";
 
 export const CaveOpenPlugin: Plugin = async (ctx, options) => {
   const opts = options ?? {};
@@ -173,7 +175,7 @@ export const CaveOpenPlugin: Plugin = async (ctx, options) => {
 
   if (modes.includes("cavemem")) {
     const skipPriorContext = opts.cavemem?.skipPriorContext ?? false;
-    providers.push((sessionID) => getCavememSystemSessionCache(sessionID, { skipPriorContext }));
+    providers.push((sessionID) => getCavememSystemPriorContext(sessionID, { skipPriorContext }));
   }
 
   if (providers.length > 0) {
@@ -201,14 +203,14 @@ Order: caveman event handler runs before cavemem (caveman registered first in `h
 
 ## Guard Conditions
 
-| Condition                        | Combined transform behavior                                                              |
-| -------------------------------- | ---------------------------------------------------------------------------------------- |
-| caveman mode is `off` or unset   | `getCavemanSystemRuleset` → `null`; only priorContext in `parts` (if cavemem active)           |
-| `skipPriorContext: true`         | `getCavememSystemSessionCache` → `null`; only ruleset in `parts` (if caveman active)                |
-| Both return `null`/`""`          | `parts` empty; no `push` — `output.system` unchanged                                     |
-| cavemem not in `modes`           | cavemem provider never added to array; `getCavememSystemSessionCache` never called                  |
-| caveman not in `modes`           | caveman provider never added to array; `getCavemanSystemRuleset` never called                  |
-| neither in `modes`               | `providers` empty; `combinedSystemTransform` never registered; no slot consumed          |
+| Condition                      | Combined transform behavior                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| caveman mode is `off` or unset | `getCavemanSystemRuleset` → `null`; only priorContext in `parts` (if cavemem active) |
+| `skipPriorContext: true`       | `getCavememSystemPriorContext` → `null`; only ruleset in `parts` (if caveman active) |
+| Both return `null`/`""`        | `parts` empty; no `push` — `output.system` unchanged                                 |
+| cavemem not in `modes`         | cavemem provider never added to array; `getCavememSystemPriorContext` never called   |
+| caveman not in `modes`         | caveman provider never added to array; `getCavemanSystemRuleset` never called        |
+| neither in `modes`             | `providers` empty; `combinedSystemTransform` never registered; no slot consumed      |
 
 Provider exclusion is structural — the array in `caveopen.ts` is built conditionally, so unchecked modules have zero runtime cost (no closure allocated, no function called per turn).
 
@@ -216,14 +218,14 @@ Provider exclusion is structural — the array in `caveopen.ts` is built conditi
 
 ## Slot Summary — All Configurations
 
-| Config                        | system[0]         | system[1]         | system[2]               | Cache hits (2-slot) |
-| ----------------------------- | ----------------- | ----------------- | ----------------------- | ------------------- |
-| caveman only                  | instructions ✅   | ruleset ✅        | —                       | 2/2                 |
-| cavemem only                  | instructions ✅   | priorContext ✅   | —                       | 2/2                 |
-| caveman + cavemem (merged)    | instructions ✅   | ruleset+prior ✅  | —                       | 2/2                 |
-| + oca-auth (merged)           | identity ✅       | instructions ✅   | ruleset+prior ❌        | 2/3                 |
-| caveman + cavemem (unmerged)  | instructions ✅   | ruleset ✅        | priorContext ❌         | 2/3                 |
-| + oca-auth (unmerged)         | identity ✅       | instructions ✅   | ruleset ❌, prior ❌    | 2/4                 |
+| Config                       | system[0]       | system[1]        | system[2]            | Cache hits (2-slot) |
+| ---------------------------- | --------------- | ---------------- | -------------------- | ------------------- |
+| caveman only                 | instructions ✅ | ruleset ✅       | —                    | 2/2                 |
+| cavemem only                 | instructions ✅ | priorContext ✅  | —                    | 2/2                 |
+| caveman + cavemem (merged)   | instructions ✅ | ruleset+prior ✅ | —                    | 2/2                 |
+| + oca-auth (merged)          | identity ✅     | instructions ✅  | ruleset+prior ❌     | 2/3                 |
+| caveman + cavemem (unmerged) | instructions ✅ | ruleset ✅       | priorContext ❌      | 2/3                 |
+| + oca-auth (unmerged)        | identity ✅     | instructions ✅  | ruleset ❌, prior ❌ | 2/4                 |
 
 Merged is strictly better or equal in every config. Maximum improvement in the common case (caveman + cavemem, no oca-auth): priorContext moves from perpetual miss to cached.
 
@@ -234,13 +236,13 @@ Merged is strictly better or equal in every config. Maximum improvement in the c
 ```
 src/
   hooks/
-    system-transform.ts             # NEW — SystemContentProvider type + combinedSystemTransform()
+    system-transform.ts             # SystemContentProvider type + combinedSystemTransform()
   modules/
     caveman/
-      lib/ruleset.ts                # ADD getCavemanSystemRuleset() export
+      lib/ruleset.ts                # getCavemanSystemRuleset() export
     cavemem/
-      lib/session-cache.ts          # ADD getCavememSystemSessionCache() export
-  caveopen.ts                       # ADD providers[] build + post-assign combinedSystemTransform
+      lib/context.ts                # getCavememSystemPriorContext() export
+  caveopen.ts                       # providers[] build + post-assign combinedSystemTransform
 ```
 
 Module hook files (`caveman/hooks/activation.ts`, `cavemem/hooks/session-init.ts`, `caveman/index.ts`, `cavemem/index.ts`) are **unchanged** — standalone plugins still use their own `systemTransformHook`. Only `caveopen.ts` overrides the merged result.
