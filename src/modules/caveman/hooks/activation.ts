@@ -14,7 +14,7 @@ export function systemTransformHook(
   return async (input, output) => {
     const mode = readModeFlag();
     if (!mode) return;
-    output.system.unshift(buildRuleset(mode));
+    output.system.push(buildRuleset(mode));
   };
 }
 

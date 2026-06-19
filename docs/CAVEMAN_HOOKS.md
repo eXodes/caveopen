@@ -46,13 +46,15 @@ Caveman uses `$CLAUDE_CONFIG_DIR/` for all state. CaveOpen uses `~/.caveman/` �
 
   const modeLabel = mode === "wenyan" ? "wenyan-full" : mode;
   const rules = buildRuleset(modeLabel); // reads SKILL.md, filters to active level
-  output.system.unshift(rules);          // prepend so it lands in system[0] → cached
+  output.system.push(rules);             // append after host instructions
 },
 ```
 
-**Fires before every inference** — not just once at session start. This is the key difference from upstream, where `caveman-activate.js` emits the ruleset once via SessionStart context. Because transform fires on every inference, the ruleset is always present in `system[0]` regardless of context compaction.
+**Fires before every inference** — not just once at session start. This is the key difference from upstream, where `caveman-activate.js` emits the ruleset once via SessionStart context. Because transform fires on every inference, the ruleset is always present regardless of context compaction.
 
-**Caching:** `system[0]` is always marked by `applyCaching()` (first 2 system messages). Full ruleset hits cache on every subsequent turn after the first. No repeat cost.
+**Caching:** OpenCode concatenates all instructions (agent prompt, AGENTS.md, `config.instructions`) into a single large block as `system[0]` before transforms run. Using `push` places the ruleset at `system[1]`, keeping the instructions block at `system[0]` — both within `applyCaching()`'s 2-slot window. Using `unshift` would displace the instructions block to `system[2]` (uncached), losing the most expensive cache slot for smaller content.
+
+**Mode switches:** When `/caveman lite` changes the mode mid-session, `buildRuleset()` returns different content on the next turn. `system[1]` (ruleset slot) gets a cache miss on that turn, then hits again. `system[0]` (instructions) is unaffected — stable cache across mode switches.
 
 **SKILL.md source:** Plugin reads `path.join(__dirname, "../skills/caveman/SKILL.md")` at runtime. Edits propagate automatically, no hardcoded duplication.
 
@@ -298,18 +300,20 @@ event: async ({ event }) => {
 
 Caveman injects content at multiple points. Each must be safe for OpenCode's two-layer caching.
 
-| Injection point               | Hook                                      | Cache behavior                                       | Safe?                                  |
-| ----------------------------- | ----------------------------------------- | ---------------------------------------------------- | -------------------------------------- |
-| Full caveman ruleset          | `experimental.chat.system.transform`      | Goes into `system[0]` → always cached                | ✅ Cached, no repeat cost              |
-| Stats output                  | `command.execute.before` → `output.parts` | User-turn message; one-shot, not repeated            | ✅ No cache impact                     |
-| Session activation flag write | `session.created` event                   | No model context — pure side effect                  | ✅ No cache impact                     |
-| History write                 | `session.idle` event                      | No model context — pure side effect                  | ✅ No cache impact                     |
+| Injection point               | Hook                                      | Cache behavior                                                        | Safe?                                         |
+| ----------------------------- | ----------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------- |
+| Full caveman ruleset          | `experimental.chat.system.transform`      | `push` → `system[1]` (after host instructions) → cached              | ✅ Cached, no repeat cost                     |
+| Stats output                  | `command.execute.before` → `output.parts` | User-turn message; one-shot, not repeated                             | ✅ No cache impact                            |
+| Session activation flag write | `session.created` event                   | No model context — pure side effect                                   | ✅ No cache impact                            |
+| History write                 | `session.idle` event                      | No model context — pure side effect                                   | ✅ No cache impact                            |
 
 **Key rules from CACHING.md:**
 
 - `applyCaching()` marks `system[0..1]` + last 2 non-system messages
-- Plugin-injected system content via `experimental.chat.system.transform` lands in `system[0]` → always cached
+- OpenCode's concatenated instructions occupy `system[0]` before any transform runs — this is the largest block and highest-priority cache slot
+- Ruleset uses `push` → lands at `system[1]`, cached without displacing instructions
 - Full ruleset stays in system transform only — `chat.message` does not inject context, preserving both last-2 non-system cache slots for real user messages
+- If `opencode-claude-auth` is loaded, its identity `unshift` takes `system[0]`, pushing instructions to `system[1]`; ruleset falls to `system[2]` (uncached) — acceptable, identity + instructions are higher priority
 
 **Gateway exception:** If user runs `@ai-sdk/gateway`, `applyCaching()` is skipped entirely (gateway handles caching). Plugin behavior unchanged — rules still inject into `system[0]` via transform. Just no cache marks.
 
