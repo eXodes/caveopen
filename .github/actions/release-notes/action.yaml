@@ -43,9 +43,6 @@ runs:
         FIXES=""
         PERF=""
         REFACTOR=""
-        DOCS=""
-        TEST=""
-        STYLE=""
 
         while IFS= read -r line; do
           [ -z "$line" ] && continue
@@ -74,10 +71,7 @@ runs:
               fix)      FIXES="${FIXES}${ENTRY}" ;;
               perf)     PERF="${PERF}${ENTRY}" ;;
               refactor) REFACTOR="${REFACTOR}${ENTRY}" ;;
-              docs)     DOCS="${DOCS}${ENTRY}" ;;
-              test)     TEST="${TEST}${ENTRY}" ;;
-              style)    STYLE="${STYLE}${ENTRY}" ;;
-              # chore/ci/build → intentionally excluded
+              # docs/test/style/chore/ci/build → intentionally excluded
             esac
           fi
         done <<< "$COMMITS"
@@ -93,9 +87,6 @@ runs:
         [ -n "$FIXES" ]    && NOTES="${NOTES}## 🐛 Bug Fixes"$'\n\n'"${FIXES}"$'\n'
         [ -n "$PERF" ]     && NOTES="${NOTES}## ⚡ Performance Improvements"$'\n\n'"${PERF}"$'\n'
         [ -n "$REFACTOR" ] && NOTES="${NOTES}## ♻️ Code Refactoring"$'\n\n'"${REFACTOR}"$'\n'
-        [ -n "$DOCS" ]     && NOTES="${NOTES}## 📚 Documentation"$'\n\n'"${DOCS}"$'\n'
-        [ -n "$TEST" ]     && NOTES="${NOTES}## 🧪 Tests"$'\n\n'"${TEST}"$'\n'
-        [ -n "$STYLE" ]    && NOTES="${NOTES}## 💄 Styling"$'\n\n'"${STYLE}"$'\n'
 
         if [ -z "$NOTES" ]; then
           NOTES="## 📝 Changes"$'\n\n'"This release includes internal improvements and updates."$'\n\n'
