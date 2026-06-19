@@ -3,11 +3,11 @@ description: Create or amend SPEC.md — the sole spec mutator in cavekit v4
 argument-hint: "[bug: <desc> | amend §X.n | from-code | <idea>]"
 ---
 
-Run the ck-spec skill with the following argument:
+Run the spec skill with the following argument:
 
 $ARGUMENTS
 
-Invoke the `ck-spec` skill. Follow its protocol exactly based on the argument:
+Invoke the `spec` skill. Follow its protocol exactly based on the argument:
 
 - `bug: <description>` → backprop protocol (§B entry + §V invariant + §T update)
 - `amend §X.n` → targeted amendment of section §X, item n

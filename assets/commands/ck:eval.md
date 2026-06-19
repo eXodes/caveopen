@@ -3,11 +3,11 @@ description: Fresh-context evaluator — grade completed build output against §
 argument-hint: "[§T.n | --diff]"
 ---
 
-Run the ck-eval skill with the following argument:
+Run the eval skill with the following argument:
 
 $ARGUMENTS
 
-Invoke the `ck-eval` skill. **Cold load only — do not read session or build history.**
+Invoke the `eval` skill. **Cold load only — do not read session or build history.**
 
 Scope:
 

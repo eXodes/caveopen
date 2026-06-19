@@ -1,5 +1,5 @@
 ---
-name: ck-backprop
+name: backprop
 description: >
   Bug → spec protocol. When a bug is found or a test fails, trace the cause,
   decide whether a new §V invariant would catch recurrence, append to §B.

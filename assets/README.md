@@ -120,13 +120,13 @@ Override model per-agent in `opencode.json`:
 │   ├── caveman-help/SKILL.md
 │   ├── caveman-review/SKILL.md
 │   ├── cavecrew/SKILL.md
-│   ├── ck-spec/SKILL.md
-│   ├── ck-build/SKILL.md
-│   ├── ck-check/SKILL.md
-│   ├── ck-audit/SKILL.md
-│   ├── ck-eval/SKILL.md
-│   ├── ck-backprop/SKILL.md
-│   └── ck-caveman/SKILL.md
+│   ├── spec/SKILL.md
+│   ├── build/SKILL.md
+│   ├── check/SKILL.md
+│   ├── audit/SKILL.md
+│   ├── eval/SKILL.md
+│   ├── backprop/SKILL.md
+│   └── cavekit/SKILL.md
 ├── commands/
 │   ├── caveman.md
 │   ├── caveman-commit.md

@@ -1,5 +1,5 @@
 ---
-name: ck-spec
+name: spec
 description: |
   Create, amend, or backprop bugs into SPEC.md at repo root. Sole mutator
   of the project spec. Triggers when the user asks to write a spec, start
@@ -13,7 +13,7 @@ description: |
 
 # spec — spec mutator
 
-Read `FORMAT.md` at repo root if not already loaded. `ck-caveman` skill applies to all writes here.
+Read `FORMAT.md` at repo root if not already loaded. `cavekit` skill applies to all writes here.
 
 ## DISPATCH
 
@@ -37,7 +37,7 @@ Steps:
 5. Break goal into ordered tasks. → §T pipe table, all status `.`, ids T1… Include `accept` column: write explicit done-when criteria per task (testable, observable). Never leave `accept` as `.` if you can infer it.
 6. §B section with header row only (`id|date|cause|fix`).
 
-Write to `SPEC.md`. Show user full file. Ask with `question` tool: "Spec OK? Suggest edits or invoke `ck-build`."
+Write to `SPEC.md`. Show user full file. Ask with `question` tool: "Spec OK? Suggest edits or invoke `build`."
 
 ## DISTILL — code → spec
 
@@ -80,4 +80,4 @@ Never silently rewrite sections user did not name.
 
 - No sub-agents. Main thread writes.
 - No dashboards, no logs, no state files beyond SPEC.md itself.
-- No auto-build after spec. User invokes `ck-build` explicitly.
+- No auto-build after spec. User invokes `build` explicitly.

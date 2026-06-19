@@ -445,7 +445,16 @@ function runCLI(): void {
     if (hasCaveman) mkdirSync(agentsDir, { recursive: true });
   }
 
-  // Skills: caveman→ caveman*/cavecrew/ dirs; cavekit→ ck-*/ dirs
+  // Skills: caveman→ caveman*/cavecrew/ dirs; cavekit→ explicit set
+  const CAVEKIT_SKILLS = new Set([
+    "cavekit",
+    "spec",
+    "build",
+    "check",
+    "audit",
+    "eval",
+    "backprop",
+  ]);
   try {
     const src = join(assetsDir, "skills");
     for (const e of readdirSync(src, { withFileTypes: true })) {
@@ -453,7 +462,7 @@ function runCLI(): void {
       const n = e.name;
       const include =
         (hasCaveman && (n.startsWith("caveman") || n === "cavecrew")) ||
-        (hasCavekit && n.startsWith("ck-"));
+        (hasCavekit && CAVEKIT_SKILLS.has(n));
       if (!include) continue;
       walkCopy(join(src, n), join(skillsDir, n), "skills", n);
     }

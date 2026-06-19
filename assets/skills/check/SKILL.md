@@ -1,9 +1,9 @@
 ---
-name: ck-check
+name: check
 description: >
   Read-only drift detector. Diffs SPEC.md against current code and reports
   violations grouped by severity. Writes nothing — suggests remedies via
-  the ck-spec or ck-build skills but never invokes them. Triggers when the user
+  the spec or build skills but never invokes them. Triggers when the user
   asks to check drift, audit the spec, verify invariants, or ask whether
   code still matches the spec. Phrasings: "check drift", "audit the spec",
   "does the code still match §V", "check invariants", "spec vs code".
@@ -15,7 +15,7 @@ Pure diagnostic. Reports violations. Writes nothing. User decides remedy.
 
 ## LOAD
 
-1. Invoke `ck-caveman` skill and read `SPEC.md`. If missing → "no spec, nothing to check." Stop.
+1. Invoke `cavekit` skill and read `SPEC.md`. If missing → "no spec, nothing to check." Stop.
 2. Parse invocation args:
    - `§V` → check invariants only (default)
    - `§I` → check interfaces
@@ -53,7 +53,7 @@ Report:
 V1: COMPUTATIONAL → cmd: npm test -- --grep "auth"
 V2: INFERENTIAL   test: auth.test.ts:47 TestV2_TokenExpiry
 V3: ADVISORY      no cmd, no test
-V4: DEAD          no cmd, no test, no §B. consider ck-audit
+V4: DEAD          no cmd, no test, no §B. consider audit
 ```
 
 ## CHECK §I — interfaces
@@ -94,16 +94,16 @@ T3 STALE: status `x`, no middleware file exists.
 
 ## summary
 2 violate. 1 missing. 1 stale. 1 unverifiable.
-next: ck-spec skill with `bug:` or fix code at cited lines.
+next: spec skill with `bug:` or fix code at cited lines.
 ```
 
 ## REMEDY HINTS (not actions)
 
 End report with one-line hint per class:
-- VIOLATE / DRIFT → invoke ck-spec skill `bug: <V.n>` or fix code.
-- MISSING → invoke ck-build skill on `§T.n` if task exists; else ck-spec skill `amend §T`.
-- STALE → ck-spec skill `amend §T` to uncheck.
-- EXTRA → ck-spec skill `amend §I` to document, or delete code.
+- VIOLATE / DRIFT → invoke spec skill `bug: <V.n>` or fix code.
+- MISSING → invoke build skill on `§T.n` if task exists; else spec skill `amend §T`.
+- STALE → spec skill `amend §T` to uncheck.
+- EXTRA → spec skill `amend §I` to document, or delete code.
 
 Never invoke fixes. Report only.
 

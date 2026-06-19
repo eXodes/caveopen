@@ -1,10 +1,10 @@
 ---
-name: ck-eval
+name: eval
 description: |
   Fresh-context evaluator. Grades completed build output against §V invariants
-  and §T accept criteria without seeing build history. Invoke after ck-build
+  and §T accept criteria without seeing build history. Invoke after build
   completes, or as a CI step. Triggers on: "eval this", "check my work",
-  "ck-eval", "did I satisfy the spec", "grade this diff".
+  "eval", "did I satisfy the spec", "grade this diff".
 ---
 
 # eval — fresh-context evaluator
@@ -26,13 +26,13 @@ Fresh context = independent grade.
 User provides one of:
 - `git diff HEAD~1` or patch text
 - List of changed files
-- `ck-eval §T.n` — evaluate specific task
+- `eval §T.n` — evaluate specific task
 
 ## STEPS
 
 ### 1. LOAD SPEC (cold)
 
-Invoke `ck-caveman` skill and read `SPEC.md`. Parse §V and §T only.
+Invoke `cavekit` skill and read `SPEC.md`. Parse §V and §T only.
 Do NOT read code files beyond what's in the diff.
 
 ### 2. IDENTIFY SCOPE
@@ -55,7 +55,7 @@ For each cited V<n>:
 
 For each task in scope:
 - Read `accept` column.
-- If `accept` = `.` or empty → WARN: no acceptance criteria defined. Cannot grade. Flag for `ck-spec` skill.
+- If `accept` = `.` or empty → WARN: no acceptance criteria defined. Cannot grade. Flag for `spec` skill.
 - If `accept` has criteria → does diff satisfy it? PASS / FAIL. Cite evidence.
 
 ### 5. VERDICT
@@ -86,6 +86,6 @@ Verdicts: **PASS** / **PARTIAL** / **FAIL** / **CANNOT_GRADE** (no accept criter
 ## NON-GOALS
 
 - Zero writes. Never edits SPEC.md or code.
-- Does not invoke `ck-build` or `ck-spec` skills.
+- Does not invoke `build` or `spec` skills.
 - Does not run shell commands.
 - Does not read files outside the diff.

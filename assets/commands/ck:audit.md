@@ -3,6 +3,6 @@ description: Post-model-upgrade §V audit — classify invariants as COMPUTATION
 argument-hint: "[--trim]"
 ---
 
-Invoke the `ck-audit` skill with the following arguments:
+Invoke the `audit` skill with the following arguments:
 
 $ARGUMENTS

@@ -3,11 +3,11 @@ description: Read-only drift report — check codebase against SPEC.md
 argument-hint: "[§V | §I | §T | --all]"
 ---
 
-Run the ck-check skill with the following argument:
+Run the check skill with the following argument:
 
 $ARGUMENTS
 
-Invoke the `ck-check` skill. Scope:
+Invoke the `check` skill. Scope:
 
 - `§V` → invariant check only
 - `§I` → interface check only

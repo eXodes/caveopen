@@ -1,12 +1,12 @@
 ---
-name: ck-audit
+name: audit
 description: >
   Post-model-upgrade §V audit — classifies invariants as COMPUTATIONAL / INFERENTIAL /
   ADVISORY / DEAD / NEEDS TEST. Use after upgrading models or when §V has grown stale.
-  Triggers on: "audit invariants", "classify §V", "ck-audit", "--trim" to show dead only.
+  Triggers on: "audit invariants", "classify §V", "audit", "--trim" to show dead only.
 ---
 
-# ck-audit — §V invariant classifier
+# audit — §V invariant classifier
 
 **Read-only. Zero writes. Suggest only.**
 
@@ -19,7 +19,7 @@ description: >
 
 ### 1. LOAD
 
-Invoke `ck-caveman` skill and read `SPEC.md §V`. Note today's date. Note §B entries (bug backlog — these mark invariants with precedent).
+Invoke `cavekit` skill and read `SPEC.md §V`. Note today's date. Note §B entries (bug backlog — these mark invariants with precedent).
 
 ### 2. CLASSIFY each invariant
 
@@ -51,7 +51,7 @@ One line per invariant. Include age in days for ADVISORY and DEAD.
 
 End with:
 - Count per classification
-- One suggested next step: `ck-spec amend §V` (to prune DEAD) or `ck-spec bug:` referencing NEEDS TEST entries
+- One suggested next step: `spec amend §V` (to prune DEAD) or `spec bug:` referencing NEEDS TEST entries
 
 ## OUTPUT RULES
 
@@ -64,4 +64,4 @@ End with:
 
 - Zero writes to SPEC.md or any file.
 - Does not run shell commands (reports `→ cmd:` annotations for user to run).
-- Does not invoke `ck-build`, `ck-check`, or `ck-spec` skills.
+- Does not invoke `build`, `check`, or `spec` skills.
