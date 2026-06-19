@@ -10,6 +10,7 @@ import {
   mkdirSync,
   copyFileSync,
   readdirSync,
+  rmSync,
   realpathSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
@@ -39,6 +40,7 @@ export function colorLabel(label: string, tty: boolean): string {
   if (["added", "registered", "configured"].includes(label))
     return `\x1b[32m${label}\x1b[0m`;
   if (label === "updated") return `\x1b[33m${label}\x1b[0m`;
+  if (label === "removed") return `\x1b[31m${label}\x1b[0m`;
   return label;
 }
 
@@ -451,10 +453,28 @@ function runCLI(): void {
     "spec",
     "build",
     "check",
+    "backprop",
+    "grill",
+    "research",
+    "review",
+    "deepen",
+  ]);
+
+  // Stale assets removed from upstream — delete on re-init so users don't keep dead files
+  // 7a5beb2: ck-* prefix dropped, ck-caveman merged into cavekit
+  // 9475da7: audit + eval removed
+  const STALE_CAVEKIT_SKILLS = [
+    "ck-audit",
+    "ck-backprop",
+    "ck-build",
+    "ck-caveman",
+    "ck-check",
+    "ck-eval",
+    "ck-spec",
     "audit",
     "eval",
-    "backprop",
-  ]);
+  ];
+  const STALE_CAVEKIT_COMMANDS = ["ck:audit.md", "ck:eval.md"];
   try {
     const src = join(assetsDir, "skills");
     for (const e of readdirSync(src, { withFileTypes: true })) {
@@ -495,6 +515,28 @@ function runCLI(): void {
     }
   } catch (e) {
     printWarn(`copy commands: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // ── Remove stale cavekit assets ───────────────────────────────────
+  if (hasCavekit) {
+    for (const name of STALE_CAVEKIT_SKILLS) {
+      const staleDir = join(skillsDir, name);
+      if (existsSync(staleDir)) {
+        if (!dryRun) rmSync(staleDir, { recursive: true, force: true });
+        printOk(
+          `${colorLabel("removed", isTTY)}  ${g("skills")} ${name} ← ${g(`${scope}:skills`)} stale`,
+        );
+      }
+    }
+    for (const file of STALE_CAVEKIT_COMMANDS) {
+      const stalePath = join(commandsDir, file);
+      if (existsSync(stalePath)) {
+        if (!dryRun) rmSync(stalePath, { force: true });
+        printOk(
+          `${colorLabel("removed", isTTY)}  ${g("commands")} /${file.replace(/\.md$/, "")} ← ${g(`${scope}:commands`)} stale`,
+        );
+      }
+    }
   }
 
   // README.md: always (not module-gated; always useful)

@@ -17,8 +17,9 @@ export function commandExecuteBeforeHook(
     const pluginDir = path.dirname(fileURLToPath(import.meta.url));
     const sourceFormat = path.join(pluginDir, "../assets/FORMAT.md");
     await fs.copyFile(sourceFormat, destFormat);
-    const text = existed
-      ? `FORMAT.md overwritten at ${destFormat} (updated to latest).`
+    const text =
+      existed ?
+        `FORMAT.md overwritten at ${destFormat} (updated to latest).`
       : `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`;
 
     output.parts.splice(
@@ -37,7 +38,7 @@ export function commandExecuteBeforeHook(
         messageID: output.parts[0].messageID,
         sessionID: input.sessionID,
         type: "text",
-        text: "FORMAT.md copied, no futher action.",
+        text: "FORMAT.md copied, no further action.",
         synthetic: true,
       },
     );
