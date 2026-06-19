@@ -163,24 +163,27 @@ Caveman defaults to `full` on every new session. Change the level at any time wi
 
 ## How it works
 
-Each module registers TypeScript hooks into OpenCode's plugin lifecycle. The three modules compose cleanly — same-key handlers chain (`a → b`), output mutations accumulate:
+Each module registers TypeScript hooks into OpenCode's plugin lifecycle. Same-key handlers chain (`a → b`), output mutations accumulate. The `experimental.chat.system.transform` hook is a special case — caveman and cavemem are merged into a single handler at composition time:
 
 ```
 CaveOpenPlugin
-  ├── caveman  → experimental.chat.system.transform, chat.message, command.execute.before, event
+  ├── caveman  → chat.message, command.execute.before, event
   ├── cavekit  → command.execute.before, config
-  └── cavemem  → experimental.chat.system.transform, chat.message, tool.execute.after, event
+  ├── cavemem  → chat.message, tool.execute.after, event
+  └── [combined] → experimental.chat.system.transform
+                    ruleset (caveman) + priorContext (cavemem) → one system[] push
 ```
 
-OpenCode concatenates all instructions (agent prompt, AGENTS.md, `config.instructions`) into `system[0]` before any transform runs. CaveOpen appends after that block using `push` — never `unshift` — so the host instructions always occupy the highest-priority cache slot. With `applyCaching()` marking `system[0]` and `system[1]` on Anthropic models, the slot assignment is:
+OpenCode concatenates all instructions (agent prompt, AGENTS.md, `config.instructions`) into `system[0]` before any transform runs. CaveOpen appends after that block using `push` — never `unshift` — so the host instructions always occupy the highest-priority cache slot. Merging caveman and cavemem into a single `push` keeps both within `applyCaching()`'s 2-slot window:
 
 ```
-system[0]  OpenCode instructions      ← always cached (largest block)
-system[1]  caveman ruleset            ← cached (appended by caveman)
-system[2]  cavemem prior context      ← uncached; one-time cost at session start
+system[0]  OpenCode instructions                 ← cached (largest block)
+system[1]  caveman ruleset + cavemem priorContext ← cached (merged into one slot)
 ```
 
-If `opencode-claude-auth` is loaded, its identity `unshift` takes `system[0]` and shifts instructions to `system[1]` — both remain cached, CaveOpen additions fall to `system[2+]` (accepted miss).
+If `opencode-claude-auth` is loaded, its identity `unshift` takes `system[0]` and shifts instructions to `system[1]` — both remain cached, CaveOpen additions fall to `system[2]` (accepted miss).
+
+Modules excluded via `modes` option are omitted entirely — their content providers are never added to the combined transform, so they have zero per-turn cost.
 
 ---
 

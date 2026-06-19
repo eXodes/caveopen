@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import type { CavemanMode } from "./config.js";
+import { readModeFlag } from "./config.js";
 
 // Probe in priority order: project → global OpenCode install.
 // Matches where `caveopen init --project` and `caveopen init --global` write skills.
@@ -67,4 +68,15 @@ export function buildRuleset(mode: CavemanMode): string {
   const footer = `\n</system-reminder>`;
 
   return header + body + footer;
+}
+
+/**
+ * Returns the caveman ruleset string for the current mode, or null when
+ * caveman is off or the mode flag is absent. Used by caveopen.ts to build
+ * the combined system.transform provider — not called directly by the hook.
+ */
+export function getCavemanSystemRuleset(): string | null {
+  const mode = readModeFlag();
+  if (!mode) return null;
+  return buildRuleset(mode);
 }
