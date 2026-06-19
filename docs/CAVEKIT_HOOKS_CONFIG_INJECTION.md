@@ -2,18 +2,18 @@
 
 Analysis of whether `assets/` content (agents, skills, commands) can be injected at runtime via plugin hooks, eliminating the need for `npx caveopen init` to copy files locally.
 
-**Conclusion: `npx caveopen init` is not required.** Commands and agents inject via the `config` hook at startup. Skills write on first `session.created` (idempotent). `FORMAT.md` is already handled by `/ck:init` (registered via `config` hook), which users run per-project when starting SDD work.
+> **Status:** Design/feasibility analysis. `FORMAT.md` (via `/ck:init`) is the only piece implemented. Commands, agents, and skill bootstrapping described below are planned but not yet wired.
 
 ---
 
 ## Summary
 
-| Asset type    | Runtime injection             | Mechanism                                                 | Verdict          |
+| Asset type    | Runtime injection             | Mechanism                                                 | Status           |
 | ------------- | ----------------------------- | --------------------------------------------------------- | ---------------- |
-| **Commands**  | ✅ Full                       | `config` hook → `config.command`                          | **Do it**        |
-| **Agents**    | ✅ Full                       | `config` hook → `config.agent`                            | **Do it**        |
-| **Skills**    | ⚡ Write-on-demand            | `session.created` → write to `~/.config/opencode/skills/` | **Do it**        |
-| **FORMAT.md** | ✅ Per-project via `/ck:init` | `config` hook registers command                           | **Already done** |
+| **Commands**  | ✅ Feasible                   | `config` hook → `config.command`                          | **Not yet done** |
+| **Agents**    | ✅ Feasible                   | `config` hook → `config.agent`                            | **Not yet done** |
+| **Skills**    | ⚡ Write-on-demand            | `session.created` → write to `~/.config/opencode/skills/` | **Not yet done** |
+| **FORMAT.md** | ✅ Per-project via `/ck:init` | `config` hook registers command                           | **Done**         |
 
 ---
 
@@ -247,18 +247,18 @@ event: async ({ event }) => {
 
 ---
 
-## Migration Impact on `init`
+## Migration Impact on `init` (planned)
 
-`npx caveopen init` is eliminated. All assets handled automatically:
+> Not yet implemented. `npx caveopen init` remains the install method. This section describes the intended end state once commands, agents, and skill bootstrapping are wired.
 
-| What `init` did                                        | Replacement                                                                                                     |
+| What `init` does today                                 | Planned replacement                                                                                             |
 | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | Copy `assets/commands/*.md` to `.opencode/commands/`   | `config` hook injects at startup                                                                                |
 | Copy `assets/agents/*.agent.md` to `.opencode/agents/` | `config` hook injects at startup                                                                                |
 | Copy `assets/skills/*/SKILL.md` to `.opencode/skills/` | `session.created` writes to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project) on first run |
-| Copy `FORMAT.md` to project root                       | `/ck:init` command (registered via `config` hook) — run once per project when starting SDD work                 |
+| Copy `FORMAT.md` to project root                       | `/ck:init` command (registered via `config` hook) — **already done**                                            |
 
-`FORMAT.md` is intentionally per-project: it belongs in the repo alongside `SPEC.md`. Users run `/ck:init` once when starting cavekit SDD on a project, same as before. This is deliberate user action, not a setup burden.
+`FORMAT.md` is intentionally per-project: it belongs in the repo alongside `SPEC.md`. Users run `/ck:init` once when starting cavekit SDD on a project. This is deliberate user action, not a setup burden.
 
 ---
 
