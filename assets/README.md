@@ -40,7 +40,7 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 | Hook                                 | Trigger                   | What it does                                                                                                                                                                                                                        |
 | ------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `experimental.chat.system.transform` | Every main-agent LLM call | Reads mode flag from disk; if active, unshifts ruleset into `output.system[]`                                                                                                                                                       |
+| `experimental.chat.system.transform` | Every main-agent LLM call | Reads mode flag from disk; if active, pushes ruleset onto `output.system[]` (after host instructions)                                                                                                                                                       |
 | `chat.message`                       | User submits a message    | Parses `/caveman [lite\|full\|ultra\|wenyan-*\|off]` and natural-language phrases; writes mode flag to disk; appends per-turn reminder nudge to `output.parts` when mode is active (skipped for `commit`/`review`/`compress` modes) |
 | `command.execute.before`             | `/caveman-stats` command  | Fetches live session token counts via client API; formats stats. Accepts `--all` (lifetime history) and `--since Nd` (last N days) flags; pushes text part into output                                                              |
 | `event` (`session.created`)          | New session opened        | Reads `defaultMode` from config; writes mode flag if none set and default is not `off`                                                                                                                                              |
@@ -63,7 +63,7 @@ Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each h
 
 | Hook                                 | Trigger              | What it does                                                                                                                                                            |
 | ------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]`. Skipped entirely when `skipPriorContext: true`.                             |
+| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; pushes it onto `output.system[]` (after host instructions + ruleset). Skipped entirely when `skipPriorContext: true`.                             |
 | `chat.message`                       | User submits message | Ensures session is initialized (eager init guard), then fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation)      |
 | `tool.execute.after`                 | Any tool completes   | Ensures session is initialized (eager init guard for subagent sessions), then fires `cavemem hook run post-tool-use` with tool name, input, and output                  |
 | `event` (`session.created`)          | New session opened   | Fires `cavemem hook run session-start` with session ID + session directory; caches returned prior-session context string for system prompt inject                       |
@@ -85,6 +85,16 @@ mergeHooks rules:
 ```
 
 Modules excluded by `modes` option are omitted from `hookSets` entirely. Hook handlers are non-fatal by default — errors in `a` are caught and logged; `b` still runs.
+
+**System prompt slot ordering** — OpenCode concatenates all instructions into `system[0]` before transforms run. Both caveman and cavemem use `push` (not `unshift`) so host instructions always hold the highest-priority cache slot. `applyCaching()` marks `system[0..1]`:
+
+```
+system[0]  host instructions           ✅ cached
+system[1]  caveman ruleset (push)      ✅ cached
+system[2]  cavemem priorContext (push) ❌ uncached — one-time session-start cost
+```
+
+With `opencode-claude-auth` loaded (uses `unshift` for identity): identity→`[0]`, instructions→`[1]`, caveopen→`[2+]` (uncached but accepted — auth + instructions take priority).
 
 ---
 

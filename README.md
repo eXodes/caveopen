@@ -172,7 +172,15 @@ CaveOpenPlugin
   └── cavemem  → experimental.chat.system.transform, chat.message, tool.execute.after, event
 ```
 
-System prompt injections land in `system[0]`/`system[1]` — the slots that OpenCode's `applyCaching()` always marks for prompt caching on Anthropic models. The caveman ruleset and cavemem context are loaded once per session and served from cache on every subsequent turn.
+OpenCode concatenates all instructions (agent prompt, AGENTS.md, `config.instructions`) into `system[0]` before any transform runs. CaveOpen appends after that block using `push` — never `unshift` — so the host instructions always occupy the highest-priority cache slot. With `applyCaching()` marking `system[0]` and `system[1]` on Anthropic models, the slot assignment is:
+
+```
+system[0]  OpenCode instructions      ← always cached (largest block)
+system[1]  caveman ruleset            ← cached (appended by caveman)
+system[2]  cavemem prior context      ← uncached; one-time cost at session start
+```
+
+If `opencode-claude-auth` is loaded, its identity `unshift` takes `system[0]` and shifts instructions to `system[1]` — both remain cached, CaveOpen additions fall to `system[2+]` (accepted miss).
 
 ---
 
