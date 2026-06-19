@@ -1,5 +1,6 @@
 import type { Event } from "@opencode-ai/sdk";
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
+import type { CaveOpenOptions } from "../../../caveopen.js";
 import { runCavememHook } from "../lib/runner.js";
 import {
   getCachedContext,
@@ -42,13 +43,19 @@ export async function handleSessionCreated(
   const sessionID = event.properties.info.id;
   if (!sessionID) return;
 
-  await initSession(sessionID, event.properties.info.directory ?? process.cwd());
+  await initSession(
+    sessionID,
+    event.properties.info.directory ?? process.cwd(),
+  );
 }
 
 export function systemTransformHook(
   ctx: PluginInput,
+  options?: CaveOpenOptions["cavemem"],
 ): NonNullable<Hooks["experimental.chat.system.transform"]> {
   return async (input, output) => {
+    if (options?.skipPriorContext) return;
+
     const sessionID = input.sessionID;
     if (!sessionID) return;
 

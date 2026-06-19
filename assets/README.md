@@ -63,7 +63,7 @@ Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each h
 
 | Hook                                 | Trigger              | What it does                                                                                                                                                            |
 | ------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]`                                                                              |
+| `experimental.chat.system.transform` | Every LLM call       | Reads cached prior-session context for this session ID; unshifts it into `output.system[]`. Skipped entirely when `skipPriorContext: true`.                             |
 | `chat.message`                       | User submits message | Ensures session is initialized (eager init guard), then fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation)      |
 | `tool.execute.after`                 | Any tool completes   | Ensures session is initialized (eager init guard for subagent sessions), then fires `cavemem hook run post-tool-use` with tool name, input, and output                  |
 | `event` (`session.created`)          | New session opened   | Fires `cavemem hook run session-start` with session ID + session directory; caches returned prior-session context string for system prompt inject                       |
@@ -175,6 +175,18 @@ Opt into specific modules only:
 ```
 
 Modes: `caveman` | `cavekit` | `cavemem` (default: all three, as an array)
+
+cavemem options:
+
+```json
+{
+  "plugin": [["caveopen", { "cavemem": { "skipPriorContext": true } }]]
+}
+```
+
+| Option             | Type    | Default | Description                                                                                                                                                |
+| ------------------ | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skipPriorContext` | boolean | `false` | Skip injecting prior-session summaries into the system prompt. Observations are still written to the store. Workaround for cavemem ≤ 0.2.1 cross-project leak ([cavemem#39](https://github.com/JuliusBrussee/cavemem/issues/39)). |
 
 ---
 

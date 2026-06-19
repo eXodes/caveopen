@@ -1,4 +1,5 @@
 import type { Plugin, PluginInput, Hooks } from "@opencode-ai/plugin";
+import type { CaveOpenOptions } from "../../caveopen.js";
 import {
   handleSessionCreated,
   systemTransformHook,
@@ -8,9 +9,12 @@ import { toolExecuteAfterHook } from "./hooks/tool.js";
 import { handleSessionIdle } from "./hooks/turn-summary.js";
 import { handleSessionDeleted } from "./hooks/session-end.js";
 
-export function caveMemHooks(ctx: PluginInput): Hooks {
+export function caveMemHooks(
+  ctx: PluginInput,
+  options?: CaveOpenOptions["cavemem"],
+): Hooks {
   return {
-    "experimental.chat.system.transform": systemTransformHook(ctx),
+    "experimental.chat.system.transform": systemTransformHook(ctx, options),
     "chat.message": chatMessageHook(ctx),
     "tool.execute.after": toolExecuteAfterHook(ctx),
     "event": async ({ event }) => {

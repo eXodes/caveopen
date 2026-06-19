@@ -69,13 +69,13 @@ Only `session-start` and `user-prompt-submit` produce stdout. All other hooks st
 
 ## Hook Mapping
 
-| OpenCode hook                     | cavemem hook name    | Stdin payload fields                                     | Returns context?         |
-| --------------------------------- | -------------------- | -------------------------------------------------------- | ------------------------ |
-| `event: session.created`          | `session-start`      | `session_id`, `ide`, `cwd`                               | ✅ prior-session context |
-| `chat.message`                    | `user-prompt-submit` | `session_id`, `prompt`                                   | ✅ (always `''`)         |
-| `tool.execute.after`              | `post-tool-use`      | `session_id`, `tool_name`, `tool_input`, `tool_response` | ❌                       |
-| `event: session.idle` + SDK fetch | `stop`               | `session_id`, `last_assistant_message`                   | ❌                       |
-| `event: session.deleted`          | `session-end`        | `session_id`                                             | ❌                       |
+| OpenCode hook                     | cavemem hook name    | Stdin payload fields                                     | Returns context?                                      |
+| --------------------------------- | -------------------- | -------------------------------------------------------- | ----------------------------------------------------- |
+| `event: session.created`          | `session-start`      | `session_id`, `ide`, `cwd`                               | ✅ prior-session context (suppressed by `skipPriorContext`) |
+| `chat.message`                    | `user-prompt-submit` | `session_id`, `prompt`                                   | ✅ (always `''`)                                      |
+| `tool.execute.after`              | `post-tool-use`      | `session_id`, `tool_name`, `tool_input`, `tool_response` | ❌                                                    |
+| `event: session.idle` + SDK fetch | `stop`               | `session_id`, `last_assistant_message`                   | ❌                                                    |
+| `event: session.deleted`          | `session-end`        | `session_id`                                             | ❌                                                    |
 
 ---
 
@@ -122,12 +122,15 @@ event: async ({ event }) => {
 
 ```ts
 'experimental.chat.system.transform': async (input, output) => {
+  if (options?.skipPriorContext) return;   // opt-out via plugin options
   const ctx = getCachedContext(input.sessionID)
   if (ctx) output.system.unshift(ctx)
 }
 ```
 
 Never inject in `chat.message` — thrashes the last-2 KV-cache slots.
+
+**`skipPriorContext` option** — when `cavemem.skipPriorContext: true` is set in plugin options, `systemTransformHook` returns immediately without injecting. Observations (prompts, tool calls, turn summaries) are still written to the store; only the system-prompt injection is suppressed. This is the recommended workaround for cavemem ≤ 0.2.1, which fetches prior-session hints globally without filtering by `cwd` ([cavemem#39](https://github.com/JuliusBrussee/cavemem/issues/39)).
 
 ---
 

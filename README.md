@@ -131,6 +131,20 @@ Three compressed-output subagents available inside OpenCode sessions:
 
 `modes` accepts an array of `caveman`, `cavekit`, and `cavemem`. Default is all three. The CLI flag `--modes caveman,cavekit` accepts a comma-separated string and converts it to array form automatically.
 
+### cavemem options
+
+```json
+{
+  "plugin": [["caveopen", { "cavemem": { "skipPriorContext": true } }]]
+}
+```
+
+| Option            | Type    | Default | Description                                                                                                     |
+| ----------------- | ------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| `skipPriorContext` | boolean | `false` | Skip injecting prior-session summaries into the system prompt. Observations are still written to the memory store. |
+
+`skipPriorContext` is a workaround for a known upstream bug in cavemem ≤ 0.2.1 where prior-session context is not scoped to the current working directory and leaks across unrelated projects ([cavemem#39](https://github.com/JuliusBrussee/cavemem/issues/39)). Setting it to `true` disables injection until a fixed version of cavemem is installed.
+
 ### Override agent models
 
 ```json
