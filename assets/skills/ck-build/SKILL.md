@@ -1,13 +1,13 @@
 ---
 name: ck-build
-description: |
+description: >
   Plan-then-execute implementation against SPEC.md. Native single-thread
-  loop, no sub-agents. On test or build failure, auto-invokes the backprop
+  loop, no sub-agents. On test or build failure, auto-invokes the ck-backprop
   skill before retrying — a failed verification always considers whether
   a new §V invariant would prevent recurrence. Triggers when the user asks
   to build, implement, execute the spec, or tackle a specific §T task
   (`build §T.3`, `build --next`, `implement next task`, `run the build`).
-  Expects SPEC.md to exist; if not, defers to the spec skill.
+  Expects SPEC.md to exist; if not, defers to the ck-spec skill.
 ---
 
 # build — implement spec
@@ -16,8 +16,8 @@ Single-thread native plan→execute. You are main agent. No swarm.
 
 ## LOAD
 
-1. Read `SPEC.md`. If missing → tell user to invoke the spec skill first. Stop.
-2. Read `FORMAT.md` once if not loaded.
+1. Read `SPEC.md`. If missing → tell user to invoke the `/ck:spec` first. Stop.
+2. Invoke `ck-caveman` skill and read `FORMAT.md` once if not loaded.
 3. Parse invocation args:
    - `§T.n` → that task only
    - `--next` → lowest-numbered row with status `.` or `~`
@@ -33,7 +33,7 @@ Native plan mode. For chosen task(s):
 4. List tests to add or update (one per invariant touched).
 5. Name verification command (test, build, lint).
 
-Show plan. Wait for user OK unless auto mode.
+Show plan. Prompt `question` tool for user OK unless auto mode.
 
 ## EXECUTE
 
@@ -43,7 +43,7 @@ Per task in order:
 2. Edit code per plan.
 3. Run verification command.
 4. **Pass** → flip `~` → `x`. Next task.
-5. **Fail** → invoke backprop skill. Do NOT retry blindly.
+5. **Fail** → invoke `ck-backprop` skill. Do NOT retry blindly.
 
 ## FAIL → BACKPROP
 
@@ -52,14 +52,14 @@ On test/build failure:
 1. Read failure output.
 2. Ask: is failure (a) my code bug, (b) spec wrong, or (c) unspecified edge case?
 3. If (a) → fix code, re-run. No spec change.
-4. If (b) or (c) → invoke spec skill with `bug: <cause>` first, let it update §V and §B, then resume build against updated spec.
+4. If (b) or (c) → invoke `ck-spec` skill with `bug: <cause>` first, let it update §V and §B, then resume build against updated spec.
 
 Rule: never silently fix root-cause without considering backprop. §B is the memory that stops recurrence.
 
 ## WRITE POLICY
 
 - Only flip §T status. No other SPEC.md edits from build.
-- Other spec edits → invoke spec skill.
+- Other spec edits → invoke `ck-spec` skill.
 - Commit after each §T completes. Message: `T<n>: <goal line>` + §V cites.
 
 ## VERIFICATION

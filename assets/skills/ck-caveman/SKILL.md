@@ -1,6 +1,6 @@
 ---
 name: ck-caveman
-description: |
+description: >
   Caveman encoding for SPEC.md and spec-adjacent writes. Loaded by /ck:spec, /ck:build,
   /ck:check. Cuts tokens ~75% vs prose while staying precise. Triggers on any write
   to SPEC.md or when user says "caveman", "compress this", "be brief".
@@ -8,7 +8,7 @@ description: |
 
 # caveman — spec encoding
 
-Applies to SPEC.md writes, spec-referencing prose, backprop entries.
+Applies to `SPEC.md` writes, spec-referencing prose, backprop entries.
 Does NOT apply to code, error strings, commit messages, PR descriptions.
 
 ## GRAMMAR

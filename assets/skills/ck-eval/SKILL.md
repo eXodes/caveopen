@@ -32,7 +32,7 @@ User provides one of:
 
 ### 1. LOAD SPEC (cold)
 
-Read `SPEC.md`. Parse §V and §T only.
+Invoke `ck-caveman` skill and read `SPEC.md`. Parse §V and §T only.
 Do NOT read code files beyond what's in the diff.
 
 ### 2. IDENTIFY SCOPE
@@ -55,7 +55,7 @@ For each cited V<n>:
 
 For each task in scope:
 - Read `accept` column.
-- If `accept` = `.` or empty → WARN: no acceptance criteria defined. Cannot grade. Flag for spec skill.
+- If `accept` = `.` or empty → WARN: no acceptance criteria defined. Cannot grade. Flag for `/ck:spec` command.
 - If `accept` has criteria → does diff satisfy it? PASS / FAIL. Cite evidence.
 
 ### 5. VERDICT
@@ -86,6 +86,6 @@ Verdicts: **PASS** / **PARTIAL** / **FAIL** / **CANNOT_GRADE** (no accept criter
 ## NON-GOALS
 
 - Zero writes. Never edits SPEC.md or code.
-- Does not invoke build or spec skills.
+- Does not invoke `ck-build` or `ck-spec` skills.
 - Does not run shell commands.
 - Does not read files outside the diff.

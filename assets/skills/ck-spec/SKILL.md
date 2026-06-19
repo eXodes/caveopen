@@ -13,7 +13,7 @@ description: |
 
 # spec — spec mutator
 
-Read `FORMAT.md` at repo root if not already loaded. Caveman skill applies to all writes here.
+Read `FORMAT.md` at repo root if not already loaded. `ck-caveman` skill applies to all writes here.
 
 ## DISPATCH
 
@@ -23,7 +23,7 @@ Inspect user request and project state:
 2. No `SPEC.md` AND `from-code` in args → **DISTILL**
 3. `SPEC.md` exists AND args start `bug:` → **BACKPROP**
 4. `SPEC.md` exists AND args start `amend` → **AMEND**
-5. `SPEC.md` exists, no args → ask user which mode
+5. `SPEC.md` exists, no args → ask user with `question` tool which mode
 
 ## NEW — idea → spec
 
@@ -37,7 +37,7 @@ Steps:
 5. Break goal into ordered tasks. → §T pipe table, all status `.`, ids T1… Include `accept` column: write explicit done-when criteria per task (testable, observable). Never leave `accept` as `.` if you can infer it.
 6. §B section with header row only (`id|date|cause|fix`).
 
-Write to `SPEC.md`. Show user full file. Ask: "spec OK? suggest edits or invoke build."
+Write to `SPEC.md`. Show user full file. Ask with `question` tool: "Spec OK? Suggest edits or invoke `/ck:build`."
 
 ## DISTILL — code → spec
 
@@ -56,7 +56,7 @@ Steps:
 4. Append §B row: `B<next>|<date>|<cause>|V<N>`.
 5. Append new invariant to §V.
 6. If fix also changes behavior → add/update §T rows.
-7. Show diff. Apply only on user OK.
+7. Show diff. Apply only on user OK with `question` tool.
 
 Rule: every bug gets a §B entry. Invariant optional but preferred.
 
@@ -80,4 +80,4 @@ Never silently rewrite sections user did not name.
 
 - No sub-agents. Main thread writes.
 - No dashboards, no logs, no state files beyond SPEC.md itself.
-- No auto-build after spec. User invokes build explicitly.
+- No auto-build after spec. User invokes `/ck:build` explicitly.

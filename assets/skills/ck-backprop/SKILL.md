@@ -1,6 +1,6 @@
 ---
 name: ck-backprop
-description: |
+description: >
   Bug → spec protocol. When a bug is found or a test fails, trace the cause,
   decide whether a new §V invariant would catch recurrence, append to §B.
   This is the one non-obvious thing SDD does that plan-then-execute doesn't.
@@ -86,4 +86,4 @@ Every backprop run produces:
 4. Code fix.
 5. One commit.
 
-No dashboards. No log files. SPEC.md + git is the full history.
+No dashboards. No log files. `SPEC.md` + git is the full history.
