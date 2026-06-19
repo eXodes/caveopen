@@ -13,15 +13,13 @@ export function commandExecuteBeforeHook(
 
     const destFormat = path.join(process.cwd(), "FORMAT.md");
 
-    const text =
-      existsSync(destFormat) ?
-        `FORMAT.md already exists at ${destFormat}.`
-      : await (async () => {
-          const pluginDir = path.dirname(fileURLToPath(import.meta.url));
-          const sourceFormat = path.join(pluginDir, "../assets/FORMAT.md");
-          await fs.copyFile(sourceFormat, destFormat);
-          return `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`;
-        })();
+    const existed = existsSync(destFormat);
+    const pluginDir = path.dirname(fileURLToPath(import.meta.url));
+    const sourceFormat = path.join(pluginDir, "../assets/FORMAT.md");
+    await fs.copyFile(sourceFormat, destFormat);
+    const text = existed
+      ? `FORMAT.md overwritten at ${destFormat} (updated to latest).`
+      : `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`;
 
     output.parts.splice(
       0,

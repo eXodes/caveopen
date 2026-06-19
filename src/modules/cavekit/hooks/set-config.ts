@@ -7,7 +7,7 @@ export function setConfig(ctx: PluginInput): NonNullable<Hooks["config"]> {
       "ck:init": {
         template: "/ck:init",
         description:
-          "Copy FORMAT.md (the SPEC.md schema) to the current project root",
+          "Copy/overwrite FORMAT.md (the SPEC.md schema) to the current project root",
       },
     };
   };

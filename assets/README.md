@@ -21,7 +21,7 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 | Command                                            | Description                              |
 | -------------------------------------------------- | ---------------------------------------- |
-| `/ck:init`                                         | Copy FORMAT.md to project root           |
+| `/ck:init`                                         | Copy/overwrite FORMAT.md to project root |
 | `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend SPEC.md                  |
 | `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks                     |
 | `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect SPEC.md vs code (read-only) |
@@ -52,7 +52,7 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 | Hook                                      | Trigger                | What it does                                                                                                                                                                   |
 | ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `command.execute.before`                  | `/ck:init` command     | Copies `FORMAT.md` to `process.cwd()`; skips if already present; replaces `output.parts` with an `ignored` result part + `synthetic` no-reply part to suppress LLM inference |
+| `command.execute.before`                  | `/ck:init` command     | Copies (overwrites) `FORMAT.md` to `process.cwd()`; always replaces — ensures stale files update on plugin upgrade; replaces `output.parts` with an `ignored` result part + `synthetic` no-reply part to suppress LLM inference |
 | `config`                                  | Plugin load            | Registers `/ck:init` as a named slash command in the TUI command palette                                                                                                       |
 
 > **No system prompt injection.** Skills (`/ck:spec`, `/ck:build`, `/ck:check`) read `SPEC.md` directly from disk. Passive injection of spec context was removed — it caused hallucination on unrelated prompts.

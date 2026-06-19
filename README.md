@@ -103,7 +103,7 @@ The store lives at `~/.cavemem/memory.db`.
 
 | Command                                            | Description                                         |
 | -------------------------------------------------- | --------------------------------------------------- |
-| `/ck:init`                                         | Copy `FORMAT.md` to project root (or global config) |
+| `/ck:init`                                         | Copy/overwrite `FORMAT.md` to project root          |
 | `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend `SPEC.md`                           |
 | `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks with a validation loop         |
 | `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect `SPEC.md` vs. code (read-only)         |

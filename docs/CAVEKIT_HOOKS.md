@@ -10,7 +10,7 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 | Claude Code hook / command           | Role                                       | OpenCode equivalent                                                      |
 | ------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `/ck:init` (UserPromptSubmit detect) | Ensure `FORMAT.md` at project root         | `command.execute.before`                                                 |
+| `/ck:init` (UserPromptSubmit detect) | Copy (overwrite) `FORMAT.md` to project root | `command.execute.before`                                               |
 | `/ck:spec`, `/ck:build`, `/ck:check` | Skill invocations (skill-level, not hooks) | Skills read `FORMAT.md` and `SPEC.md` from project root — no hook needed |
 
 ---
@@ -19,7 +19,7 @@ Cavekit in CaveOpen is scoped: cavekit v4. CaveOpen ports the spec harness — `
 
 **What it does:**
 
-Ensures `FORMAT.md` exists at project root. No args. CLI install already handles the global case — this hook only concerns the current project.
+Copies (always overwrites) `FORMAT.md` to project root. Always overwrites — ensures stale format files are replaced when the plugin updates. No args. CLI install handles the global case — this hook only concerns the current project.
 
 **Pattern: two parts — `ignored: true` (user-visible result) + `synthetic: true` (no-LLM signal)**
 
@@ -41,7 +41,7 @@ output.parts.splice(
     messageID: output.parts[0].messageID,
     sessionID: input.sessionID,
     type: "text",
-    text, // "FORMAT.md copied to ..." or "FORMAT.md already exists at ..."
+    text, // "FORMAT.md copied to ..." (first run) or "FORMAT.md overwritten at ... (updated to latest)" (subsequent runs)
     ignored: true,
   },
   {
@@ -142,7 +142,7 @@ config: async (config) => {
     "ck:init": {
       template: "/ck:init",
       description:
-        "Copy FORMAT.md (the SPEC.md schema) to the current project root",
+        "Copy/overwrite FORMAT.md (the SPEC.md schema) to the current project root",
     },
   };
 };
@@ -152,7 +152,7 @@ config: async (config) => {
 
 ## Verify Checklist
 
-- `/ck:init` copies `FORMAT.md` to project root if absent; already-exists case returns early; missing source returns clear error
+- `/ck:init` always overwrites `FORMAT.md` at project root; first-run vs. update messages differ; missing source returns clear error
 - `/ck:init` appears in TUI command palette (registered via `config` hook)
 - Non-cavekit prompts receive no spec context — no hallucination from stray `§T` task rows
 - Skills (`ck:spec`, `ck:build`, `ck:check`) read `SPEC.md` from disk directly — unaffected by this change

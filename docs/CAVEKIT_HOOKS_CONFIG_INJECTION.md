@@ -258,7 +258,7 @@ event: async ({ event }) => {
 | Copy `assets/skills/*/SKILL.md` to `.opencode/skills/` | `session.created` writes to `~/.config/opencode/skills/` (global) or `.opencode/skills/` (project) on first run |
 | Copy `FORMAT.md` to project root                       | `/ck:init` command (registered via `config` hook) — **already done**                                            |
 
-`FORMAT.md` is intentionally per-project: it belongs in the repo alongside `SPEC.md`. Users run `/ck:init` once when starting cavekit SDD on a project. This is deliberate user action, not a setup burden.
+`FORMAT.md` is intentionally per-project: it belongs in the repo alongside `SPEC.md`. Users run `/ck:init` when starting cavekit SDD on a project, and again after plugin updates to get the latest format rules. Always overwrites — deliberate user action, not a setup burden.
 
 ---
 
