@@ -25,9 +25,12 @@ export function caveMemHooks(
   };
 }
 
-export const CavememPlugin: Plugin = async (ctx) => {
+export const CavememPlugin: Plugin = async (
+  ctx,
+  options?: CaveOpenOptions["cavemem"],
+) => {
   await ctx.client.app.log({
     body: { service: "caveopen:cavemem", level: "info", message: "loaded" },
   });
-  return caveMemHooks(ctx);
+  return caveMemHooks(ctx, options);
 };

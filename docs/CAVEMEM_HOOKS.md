@@ -124,9 +124,11 @@ event: async ({ event }) => {
 'experimental.chat.system.transform': async (input, output) => {
   if (options?.skipPriorContext) return;   // opt-out via plugin options
   const ctx = getCachedContext(input.sessionID)
-  if (ctx) output.system.unshift(ctx)
+  if (ctx) output.system.push(ctx)         // append after host instructions
 }
 ```
+
+Use `push`, not `unshift`. OpenCode concatenates all instructions into `system[0]` before transforms run. `unshift` displaces that large block to `system[2]` (outside `applyCaching()`'s 2-slot window), causing a cache miss on the most expensive content every turn. `push` places priorContext at `system[2]` instead — smaller content, accepts the miss.
 
 Never inject in `chat.message` — thrashes the last-2 KV-cache slots.
 
@@ -243,15 +245,34 @@ The handler rolls up all `scope: 'turn'` summaries into a `scope: 'session'` sum
 
 ## Caching Safety
 
-| Injection point         | Hook                                      | Cache behavior                                      |
-| ----------------------- | ----------------------------------------- | --------------------------------------------------- |
-| Prior-session context   | `experimental.chat.system.transform`      | Fixed per session → `system[0]` → KV-cached turn 2+ |
-| User prompt observation | `chat.message` (write only)               | No model context mutation                           |
-| Tool observation        | `tool.execute.after` (write only)         | No model context mutation                           |
-| Turn summary            | `session.idle` (write only)               | No model context mutation                           |
-| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                           |
+| Injection point         | Hook                                      | Cache behavior                                                                      |
+| ----------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------- |
+| Prior-session context   | `experimental.chat.system.transform`      | `push` → `system[2]` (after instructions + ruleset) → uncached; turn 1 cost only   |
+| User prompt observation | `chat.message` (write only)               | No model context mutation                                                           |
+| Tool observation        | `tool.execute.after` (write only)         | No model context mutation                                                           |
+| Turn summary            | `session.idle` (write only)               | No model context mutation                                                           |
+| Session rollup          | `session.deleted` → `deleteCachedContext` | No model context mutation                                                           |
 
 Prior-session context string is immutable after `session.created`. Never re-fetch or mutate mid-session.
+
+**Slot assignment with all plugins loaded** (`applyCaching()` marks `system[0..1]`):
+
+| Slot | Content | Cached? | Rationale |
+| ---- | ------- | ------- | --------- |
+| `system[0]` | OpenCode concatenated instructions | ✅ | Largest block, host-owned, always first |
+| `system[1]` | caveman ruleset (`push`) | ✅ | Behavioral modifier, medium size |
+| `system[2]` | cavemem priorContext (`push`) | ❌ | Background context, immutable, one-time cost |
+
+When `opencode-claude-auth` is loaded (injects identity via `unshift`):
+
+| Slot | Content | Cached? |
+| ---- | ------- | ------- |
+| `system[0]` | oca identity (`unshift`) | ✅ |
+| `system[1]` | OpenCode instructions | ✅ |
+| `system[2]` | caveman ruleset | ❌ |
+| `system[3]` | cavemem priorContext | ❌ |
+
+Identity + instructions stay cached. CaveOpen additions fall outside the window — acceptable given their relative size and the priority of auth + host instructions.
 
 ---
 

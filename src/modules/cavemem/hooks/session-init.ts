@@ -62,6 +62,6 @@ export function systemTransformHook(
     const context = getCachedContext(sessionID);
     if (!context) return;
 
-    output.system.unshift(context);
+    output.system.push(context);
   };
 }
