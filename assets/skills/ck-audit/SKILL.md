@@ -3,7 +3,7 @@ name: ck-audit
 description: >
   Post-model-upgrade §V audit — classifies invariants as COMPUTATIONAL / INFERENTIAL /
   ADVISORY / DEAD / NEEDS TEST. Use after upgrading models or when §V has grown stale.
-  Triggers on: "audit invariants", "classify §V", "/ck:audit", "--trim" to show dead only.
+  Triggers on: "audit invariants", "classify §V", "ck-audit", "--trim" to show dead only.
 ---
 
 # ck-audit — §V invariant classifier
@@ -51,7 +51,7 @@ One line per invariant. Include age in days for ADVISORY and DEAD.
 
 End with:
 - Count per classification
-- One suggested next step: `/ck:spec amend §V` (to prune DEAD) or `/ck:spec bug:` referencing NEEDS TEST entries
+- One suggested next step: `ck-spec amend §V` (to prune DEAD) or `ck-spec bug:` referencing NEEDS TEST entries
 
 ## OUTPUT RULES
 

@@ -53,7 +53,7 @@ Report:
 V1: COMPUTATIONAL → cmd: npm test -- --grep "auth"
 V2: INFERENTIAL   test: auth.test.ts:47 TestV2_TokenExpiry
 V3: ADVISORY      no cmd, no test
-V4: DEAD          no cmd, no test, no §B. consider /ck:audit
+V4: DEAD          no cmd, no test, no §B. consider ck-audit
 ```
 
 ## CHECK §I — interfaces
@@ -94,16 +94,16 @@ T3 STALE: status `x`, no middleware file exists.
 
 ## summary
 2 violate. 1 missing. 1 stale. 1 unverifiable.
-next: /ck:spec command with `bug:` or fix code at cited lines.
+next: ck-spec skill with `bug:` or fix code at cited lines.
 ```
 
 ## REMEDY HINTS (not actions)
 
 End report with one-line hint per class:
-- VIOLATE / DRIFT → invoke /ck:spec command `bug: <V.n>` or fix code.
-- MISSING → invoke /ck:build command on `§T.n` if task exists; else /ck:spec command `amend §T`.
-- STALE → /ck:spec command `amend §T` to uncheck.
-- EXTRA → /ck:spec command `amend §I` to document, or delete code.
+- VIOLATE / DRIFT → invoke ck-spec skill `bug: <V.n>` or fix code.
+- MISSING → invoke ck-build skill on `§T.n` if task exists; else ck-spec skill `amend §T`.
+- STALE → ck-spec skill `amend §T` to uncheck.
+- EXTRA → ck-spec skill `amend §I` to document, or delete code.
 
 Never invoke fixes. Report only.
 

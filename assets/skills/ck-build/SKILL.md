@@ -16,7 +16,7 @@ Single-thread native plan→execute. You are main agent. No swarm.
 
 ## LOAD
 
-1. Read `SPEC.md`. If missing → tell user to invoke the `/ck:spec` first. Stop.
+1. Read `SPEC.md`. If missing → tell user to invoke the `ck-spec` first. Stop.
 2. Invoke `ck-caveman` skill and read `FORMAT.md` once if not loaded.
 3. Parse invocation args:
    - `§T.n` → that task only
@@ -71,7 +71,7 @@ Task `x` only if ALL hold:
 - **Accept column satisfied**: read `accept` cell for this §T row.
   - If `accept` = `.` or empty → warn user: "no accept criteria defined — mark done anyway? [y/N]"
   - If `accept` has criteria → confirm evidence exists (test output, curl response, log line, etc.)
-  - Never self-approve. Show evidence, let user confirm OR run `/ck:eval` for fresh-context grade.
+  - Never self-approve. Show evidence, let user confirm OR run `ck-eval` for fresh-context grade.
 
 Victory declaration bias: agent marking own work done = known failure mode. Default: FAIL until evidence flips it.
 

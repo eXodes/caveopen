@@ -2,9 +2,9 @@
 name: ck-eval
 description: |
   Fresh-context evaluator. Grades completed build output against §V invariants
-  and §T accept criteria without seeing build history. Invoke after /ck:build
+  and §T accept criteria without seeing build history. Invoke after ck-build
   completes, or as a CI step. Triggers on: "eval this", "check my work",
-  "/ck:eval", "did I satisfy the spec", "grade this diff".
+  "ck-eval", "did I satisfy the spec", "grade this diff".
 ---
 
 # eval — fresh-context evaluator
@@ -26,7 +26,7 @@ Fresh context = independent grade.
 User provides one of:
 - `git diff HEAD~1` or patch text
 - List of changed files
-- `/ck:eval §T.n` — evaluate specific task
+- `ck-eval §T.n` — evaluate specific task
 
 ## STEPS
 
@@ -55,7 +55,7 @@ For each cited V<n>:
 
 For each task in scope:
 - Read `accept` column.
-- If `accept` = `.` or empty → WARN: no acceptance criteria defined. Cannot grade. Flag for `/ck:spec` command.
+- If `accept` = `.` or empty → WARN: no acceptance criteria defined. Cannot grade. Flag for `ck-spec` skill.
 - If `accept` has criteria → does diff satisfy it? PASS / FAIL. Cite evidence.
 
 ### 5. VERDICT

@@ -37,7 +37,7 @@ Steps:
 5. Break goal into ordered tasks. → §T pipe table, all status `.`, ids T1… Include `accept` column: write explicit done-when criteria per task (testable, observable). Never leave `accept` as `.` if you can infer it.
 6. §B section with header row only (`id|date|cause|fix`).
 
-Write to `SPEC.md`. Show user full file. Ask with `question` tool: "Spec OK? Suggest edits or invoke `/ck:build`."
+Write to `SPEC.md`. Show user full file. Ask with `question` tool: "Spec OK? Suggest edits or invoke `ck-build`."
 
 ## DISTILL — code → spec
 
@@ -80,4 +80,4 @@ Never silently rewrite sections user did not name.
 
 - No sub-agents. Main thread writes.
 - No dashboards, no logs, no state files beyond SPEC.md itself.
-- No auto-build after spec. User invokes `/ck:build` explicitly.
+- No auto-build after spec. User invokes `ck-build` explicitly.

@@ -1,8 +1,8 @@
 ---
 name: ck-caveman
 description: >
-  Caveman encoding for SPEC.md and spec-adjacent writes. Loaded by /ck:spec, /ck:build,
-  /ck:check. Cuts tokens ~75% vs prose while staying precise. Triggers on any write
+  Caveman encoding for SPEC.md and spec-adjacent writes. Loaded by ck-spec, ck-build,
+  ck-check. Cuts tokens ~75% vs prose while staying precise. Triggers on any write
   to SPEC.md or when user says "caveman", "compress this", "be brief".
 ---
 
