@@ -25,8 +25,10 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 | `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend SPEC.md                  |
 | `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks                     |
 | `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect SPEC.md vs code (read-only) |
-| `/ck:audit [--trim]`                               | Full codebase audit against spec         |
-| `/ck:eval [§T.n\|--diff]`                          | Evaluate spec coverage and quality       |
+| `/ck:grill [<idea>\|--brutal\|--light]`            | Sharpen idea before spec via Q&A         |
+| `/ck:research <question>`                          | Gather external knowledge → §R           |
+| `/ck:review [§T.n\|--all]`                         | Adversarial spec review, go/no-go gate   |
+| `/ck:deepen [<module>\|--pick]`                    | Design-improvement pass, shrink one interface |
 
 ---
 
@@ -123,9 +125,11 @@ Override model per-agent in `opencode.json`:
 │   ├── spec/SKILL.md
 │   ├── build/SKILL.md
 │   ├── check/SKILL.md
-│   ├── audit/SKILL.md
-│   ├── eval/SKILL.md
 │   ├── backprop/SKILL.md
+│   ├── grill/SKILL.md
+│   ├── research/SKILL.md
+│   ├── review/SKILL.md
+│   ├── deepen/SKILL.md
 │   └── cavekit/SKILL.md
 ├── commands/
 │   ├── caveman.md
@@ -137,8 +141,10 @@ Override model per-agent in `opencode.json`:
 │   ├── ck:spec.md
 │   ├── ck:build.md
 │   ├── ck:check.md
-│   ├── ck:audit.md
-│   └── ck:eval.md
+│   ├── ck:grill.md
+│   ├── ck:research.md
+│   ├── ck:review.md
+│   └── ck:deepen.md
 └── agents/
     ├── cavecrew-investigator.agent.md
     ├── cavecrew-builder.agent.md

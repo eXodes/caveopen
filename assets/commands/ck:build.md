@@ -1,17 +1,14 @@
 ---
-description: Plan and execute tasks from SPEC.md §T
-argument-hint: "[§T.n | --next | --all]"
+description: Plan-then-execute against SPEC.md. Native agent loop, no sub-agents.
+argument-hint: "[§T.n | --all | --next]"
 ---
 
-Run the build skill with the following argument:
+Invoke the `build` skill with argument: $ARGUMENTS
 
-$ARGUMENTS
+Target selection:
 
-Invoke the `build` skill. Target selection:
+- `§T.n` → that task only
+- `--next` → lowest-numbered pending task
+- `--all` or _(no argument)_ → every pending task in §T order
 
-- `§T.n` → build task with ID n
-- `--next` → build the first `.` (pending) task in §T
-- `--all` → build all pending tasks in sequence
-- _(no argument)_ → same as `--next`
-
-Follow the build skill protocol: read spec → identify cites → plan → confirm (if non-trivial) → execute → update §T → backprop on failure.
+Protocol: read SPEC.md → plan against §V/§I → confirm → execute → flip §T status → backprop on failure.

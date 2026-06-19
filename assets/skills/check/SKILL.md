@@ -21,40 +21,15 @@ Pure diagnostic. Reports violations. Writes nothing. User decides remedy.
    - `§I` → check interfaces
    - `§T` → audit task status vs code
    - `--all` → all three
-   - `--run` → execute `→ cmd:` annotations in §V (computational sensors)
-   - `--coverage` → report invariant coverage (computational vs inferential vs dead)
 
 ## CHECK §V — invariants
 
 For each V<n>:
 
-1. If `→ cmd:` annotation present AND `--run` flag set:
-   - Execute the annotated command.
-   - **PASS** (exit 0) → HOLD. **FAIL** (exit non-0) → VIOLATE. Show stdout/stderr.
-   - This is a **computational sensor** — deterministic, no inference needed.
-2. If no `→ cmd:` annotation (or `--run` not set):
-   - Translate invariant into verifiable claim about code.
-   - Grep / read relevant files.
-   - Classify: **HOLD** / **VIOLATE** / **UNVERIFIABLE** (inferential).
-3. Record address + file:line evidence.
-
-## CHECK --coverage — invariant sensor audit
-
-For each V<n>:
-
-- **COMPUTATIONAL** — has `→ cmd:` annotation. Deterministic.
-- **INFERENTIAL** — no `→ cmd:`, but covered by existing test (grep for test name citing §V.n).
-- **ADVISORY** — no annotation, no test. Suggestion only — agent can ignore it.
-- **DEAD** — no annotation, no test, no §B entry. Candidate for removal.
-
-Report:
-```
-§V coverage
-V1: COMPUTATIONAL → cmd: npm test -- --grep "auth"
-V2: INFERENTIAL   test: auth.test.ts:47 TestV2_TokenExpiry
-V3: ADVISORY      no cmd, no test
-V4: DEAD          no cmd, no test, no §B. consider audit
-```
+1. Translate invariant into verifiable claim about code.
+2. Grep / read relevant files.
+3. Classify: **HOLD** / **VIOLATE** / **UNVERIFIABLE**.
+4. Record address + file:line evidence.
 
 ## CHECK §I — interfaces
 
@@ -112,4 +87,3 @@ Never invoke fixes. Report only.
 - Zero writes. No SPEC.md edits. No code edits.
 - No sub-agents. Main thread reads.
 - No scores, no grades. Binary per item: holds or drifts.
-- `--run` executes annotated commands only — never runs arbitrary code not in §V.

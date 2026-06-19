@@ -22,8 +22,8 @@ The CLI patches your `opencode.json`, copies skills, commands, and agents into t
 ```
 ✓ registered   caveopen → opencode.json
 ✓ configured   cavemem MCP → opencode.json
-✓ added        13 skills
-✓ added        12 commands
+✓ added        15 skills
+✓ added        13 commands
 ✓ added        3 agents
 ```
 
@@ -66,7 +66,7 @@ Caveman mode persists across turns and supports multiple compression levels (`li
 
 ### cavekit — spec-driven development
 
-A port of [cavekit v4](https://github.com/JuliusBrussee/cavekit) that adds spec-driven development (SDD) to OpenCode. The `/ck:init` command bootstraps a project by copying `FORMAT.md` — the canonical encoding reference that `/ck:spec`, `/ck:build`, and `/ck:check` all read from. All three skills are included and work the same as the upstream Claude Code versions.
+A port of [cavekit v4](https://github.com/JuliusBrussee/cavekit) that adds spec-driven development (SDD) to OpenCode. The `/ck:init` command bootstraps a project by copying `FORMAT.md` — the canonical encoding reference that all `ck:` skills read from. All skills are included and work the same as the upstream versions.
 
 Skills read `SPEC.md` directly from disk on demand. No ambient spec context is injected into the system prompt — that approach caused the model to hallucinate connections between open tasks and unrelated prompts.
 
@@ -102,8 +102,10 @@ The store lives at `~/.cavemem/memory.db`.
 | `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend `SPEC.md`                           |
 | `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks with a validation loop         |
 | `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect `SPEC.md` vs. code (read-only)         |
-| `/ck:audit [--trim]`                               | Full codebase audit against spec                    |
-| `/ck:eval [§T.n\|--diff]`                          | Evaluate spec coverage and quality                  |
+| `/ck:grill [<idea>\|--brutal\|--light]`            | Sharpen idea before spec via Q&A                    |
+| `/ck:research <question>`                          | Gather external knowledge → §R                      |
+| `/ck:review [§T.n\|--all]`                         | Adversarial spec review, go/no-go gate              |
+| `/ck:deepen [<module>\|--pick]`                    | Design-improvement pass, shrink one interface       |
 
 ### cavecrew agents
 

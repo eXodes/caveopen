@@ -16,7 +16,7 @@ Single-thread native plan→execute. You are main agent. No swarm.
 
 ## LOAD
 
-1. Read `SPEC.md`. If missing → tell user to invoke the `spec` first. Stop.
+1. Read `SPEC.md`. If missing → tell user to invoke the spec skill first. Stop.
 2. Invoke `cavekit` skill and read `FORMAT.md` once if not loaded.
 3. Parse invocation args:
    - `§T.n` → that task only
@@ -33,7 +33,7 @@ Native plan mode. For chosen task(s):
 4. List tests to add or update (one per invariant touched).
 5. Name verification command (test, build, lint).
 
-Show plan. Prompt `question` tool for user OK unless auto mode.
+Use `question` tool: "Plan ready. (a) proceed (b) adjust scope (c) cancel". Skip if `--all` or single unambiguous task.
 
 ## EXECUTE
 
@@ -43,7 +43,7 @@ Per task in order:
 2. Edit code per plan.
 3. Run verification command.
 4. **Pass** → flip `~` → `x`. Next task.
-5. **Fail** → invoke `backprop` skill. Do NOT retry blindly.
+5. **Fail** → invoke backprop skill. Do NOT retry blindly.
 
 ## FAIL → BACKPROP
 
@@ -52,28 +52,24 @@ On test/build failure:
 1. Read failure output.
 2. Ask: is failure (a) my code bug, (b) spec wrong, or (c) unspecified edge case?
 3. If (a) → fix code, re-run. No spec change.
-4. If (b) or (c) → invoke `spec` skill with `bug: <cause>` first, let it update §V and §B, then resume build against updated spec.
+4. If (b) or (c) → invoke spec skill with `bug: <cause>` first, let it update §V and §B, then resume build against updated spec.
 
 Rule: never silently fix root-cause without considering backprop. §B is the memory that stops recurrence.
 
 ## WRITE POLICY
 
 - Only flip §T status. No other SPEC.md edits from build.
-- Other spec edits → invoke `spec` skill.
+- Other spec edits → invoke spec skill.
 - Commit after each §T completes. Message: `T<n>: <goal line>` + §V cites.
 
 ## VERIFICATION
 
-Task `x` only if ALL hold:
+Task `x` only if:
 - Verification command exits 0.
 - New test(s) added per plan.
 - No §V invariant regressed (run full test suite at end).
-- **Accept column satisfied**: read `accept` cell for this §T row.
-  - If `accept` = `.` or empty → warn user: "no accept criteria defined — mark done anyway? [y/N]"
-  - If `accept` has criteria → confirm evidence exists (test output, curl response, log line, etc.)
-  - Never self-approve. Show evidence, let user confirm OR run `eval` for fresh-context grade.
 
-Victory declaration bias: agent marking own work done = known failure mode. Default: FAIL until evidence flips it.
+Use `question` tool before flipping to `x`: "T<n> done — verification passed. (a) mark complete (b) run again (c) needs fix". Never self-approve.
 
 ## NON-GOALS
 

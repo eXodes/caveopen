@@ -35,6 +35,7 @@ Ask three questions:
 
 ### 3. PROPOSE
 Draft the spec change. Never skip §B; §V/§I/§T are case-by-case.
+Use `question` tool: "Apply diff? §B<n> + §V<n>: <cause> (a) yes (b) adjust invariant (c) §B only, skip §V"
 
 Template:
 ```

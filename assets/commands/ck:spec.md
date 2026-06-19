@@ -1,17 +1,15 @@
 ---
-description: Create or amend SPEC.md — the sole spec mutator in cavekit v4
-argument-hint: "[bug: <desc> | amend §X.n | from-code | <idea>]"
+description: Create, amend, or backprop bug into SPEC.md. Sole mutator of spec.
+argument-hint: "[bug: <description> | amend <§X.n> | from-code | <idea>]"
 ---
 
-Run the spec skill with the following argument:
+Invoke the `spec` skill with argument: $ARGUMENTS
 
-$ARGUMENTS
-
-Invoke the `spec` skill. Follow its protocol exactly based on the argument:
+Follow its protocol exactly:
 
 - `bug: <description>` → backprop protocol (§B entry + §V invariant + §T update)
-- `amend §X.n` → targeted amendment of section §X, item n
-- `from-code` → generate spec by reading the codebase
-- `<idea>` (anything else) → create or expand SPEC.md with the idea
+- `amend §X.n` → targeted amendment of named section/item
+- `from-code` → distill spec by reading the codebase
+- `<idea>` → create new SPEC.md from the idea
 
-If SPEC.md does not exist and this is not a `from-code` or bare idea invocation, ask the user for a one-line goal to seed §G before proceeding.
+If SPEC.md does not exist and no `from-code` or idea given, ask user for one-line goal to seed §G.

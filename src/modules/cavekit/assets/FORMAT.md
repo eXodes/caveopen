@@ -25,19 +25,16 @@ external surface. what world sees.
 
 ## §V INVARIANTS
 numbered. testable. each ! MUST hold.
-Optional `→ cmd:` annotation makes invariant **executable** (runs by `/ck:check --run`).
 V1: ∀ req → auth check before handler
-V2: token expiry ≤ ⊥ allowed → cmd: npm test -- --grep "token expiry"
-V3: DB write ! in transaction → cmd: npm test
-V4: ! no circular deps → cmd: npx madge --circular src
+V2: token expiry ≤ ⊥ allowed
+V3: DB write ! in transaction
 
 ## §T TASKS
 pipe table. ids monotonic (never reused). status: `x` done / `~` wip / `.` todo.
-`accept` column: explicit done-when criteria. Default `.` = not defined (warn on mark-done).
-id|status|task|cites|accept
-T1|.|scaffold repo|-|repo init + bun install exits 0
-T2|.|impl §I.api POST /x|V2|POST /x → 200 {id}, V2 passes
-T3|x|add §V.1 middleware|V1,I.api|∀ unauthed req → 401
+id|status|task|cites
+T1|.|scaffold repo|-
+T2|.|impl §I.api POST /x|V2
+T3|x|add §V.1 middleware|V1,I.api
 
 ## §B BUGS
 pipe table. backprop log. each row = bug + invariant that catches recurrence.
@@ -113,13 +110,10 @@ If SPEC.md > 500 lines, compact §B (old bugs drop oldest) before splitting.
 
 | command | writes | section |
 |---|---|---|
-| `/spec new` | creates | all |
-| `/spec amend` | edits | chosen |
-| `/spec bug:` | appends | §B + §V |
-| `/build` | flips | §T status `.` → `~` → `x` (requires accept evidence) |
-| `/check` | — | read only |
-| `/check --run` | — | runs §V `→ cmd:` entries, reports pass/fail |
-| `/eval` | — | fresh-context §V grade against diff |
-| `/audit` | — | §V coverage + obsolescence review |
+| `ck:spec new` | creates | all |
+| `ck:spec amend` | edits | chosen |
+| `ck:spec bug` | appends | §B + §V |
+| `ck:build` | flips | §T status cell `.` → `~` → `x` |
+| `ck:check` | — | read only |
 
 That is whole format.

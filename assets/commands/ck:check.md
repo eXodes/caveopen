@@ -1,17 +1,15 @@
 ---
-description: Read-only drift report — check codebase against SPEC.md
+description: Drift detector. Diff SPEC.md against code. Read-only, zero writes.
 argument-hint: "[§V | §I | §T | --all]"
 ---
 
-Run the check skill with the following argument:
+Invoke the `check` skill with argument: $ARGUMENTS
 
-$ARGUMENTS
+Scope:
 
-Invoke the `check` skill. Scope:
-
-- `§V` → invariant check only
+- `§V` → invariant check only (default)
 - `§I` → interface check only
 - `§T` → task status check only
 - `--all` or _(no argument)_ → full drift report across all sections
 
-Output is read-only — no files are modified. Report violations, drift, and unverifiable items. If no drift: `§V §I §T ✅ no drift`.
+Output is read-only. Reports violations, drift, unverifiable items. If no drift: `§V §I §T — no drift`.

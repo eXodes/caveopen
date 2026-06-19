@@ -23,7 +23,7 @@ Inspect user request and project state:
 2. No `SPEC.md` AND `from-code` in args → **DISTILL**
 3. `SPEC.md` exists AND args start `bug:` → **BACKPROP**
 4. `SPEC.md` exists AND args start `amend` → **AMEND**
-5. `SPEC.md` exists, no args → ask user with `question` tool which mode
+5. `SPEC.md` exists, no args → use `question` tool: "Spec exists. Mode: (a) amend section (b) backprop bug (c) distill from code"
 
 ## NEW — idea → spec
 
@@ -33,15 +33,15 @@ Steps:
 1. Extract goal (1 line, caveman). → §G.
 2. List constraints user stated or implied. → §C.
 3. List external surfaces user named. → §I.
-4. Propose initial invariants. → §V (numbered V1…). For each, consider: can it be expressed as a runnable command? If yes, append `→ cmd: <shell>`.
-5. Break goal into ordered tasks. → §T pipe table, all status `.`, ids T1… Include `accept` column: write explicit done-when criteria per task (testable, observable). Never leave `accept` as `.` if you can infer it.
+4. Propose initial invariants. → §V (numbered V1…).
+5. Break goal into ordered tasks. → §T pipe table, all status `.`, ids T1…
 6. §B section with header row only (`id|date|cause|fix`).
 
-Write to `SPEC.md`. Show user full file. Ask with `question` tool: "Spec OK? Suggest edits or invoke `build`."
+Write to `SPEC.md`. Show user full file. Use `question` tool: "Spec OK? (a) looks good → invoke build (b) suggest edits"
 
 ## DISTILL — code → spec
 
-Walk repo. Produce §G (infer from README/package.json/main entry), §C (infer from stack), §I (enumerate public APIs/CLIs/configs), §V (derive from tests and assertions — add `→ cmd:` where test command is obvious), §T (one task per known TODO or missing test, populate `accept` from existing test names/assertions), §B (empty).
+Walk repo. Produce §G (infer from README/package.json/main entry), §C (infer from stack), §I (enumerate public APIs/CLIs/configs), §V (derive from tests and assertions), §T (one task per known TODO or missing test), §B (empty).
 
 Caveman everywhere. Flag uncertain items with `?` in text so user can confirm.
 
@@ -56,7 +56,7 @@ Steps:
 4. Append §B row: `B<next>|<date>|<cause>|V<N>`.
 5. Append new invariant to §V.
 6. If fix also changes behavior → add/update §T rows.
-7. Show diff. Apply only on user OK with `question` tool.
+7. Show diff. Use `question` tool: "Apply §B + §V? (a) yes (b) adjust first". Apply on confirm.
 
 Rule: every bug gets a §B entry. Invariant optional but preferred.
 
@@ -73,11 +73,10 @@ Never silently rewrite sections user did not name.
 - Caveman format per `FORMAT.md`.
 - Preserve identifiers, paths, code verbatim.
 - Numbering monotonic — never reuse §V.N or §B.N.
-- §T row `cites` column ! list §V/§I deps: `T5|.|impl auth mw|V2,I.api|V2 passes + POST → 200`.
-- §V `→ cmd:` annotations: shell commands that exit 0 on pass, non-0 on fail. No side effects.
+- §T row `cites` column ! list §V/§I deps: `T5|.|impl auth mw|V2,I.api`.
 
 ## NON-GOALS
 
 - No sub-agents. Main thread writes.
 - No dashboards, no logs, no state files beyond SPEC.md itself.
-- No auto-build after spec. User invokes `build` explicitly.
+- No auto-build after spec. User invokes build explicitly.
