@@ -33,7 +33,7 @@ R4|opencode msg tokens|Info.metadata.assistant has {tokens:{input,output,reasoni
 R5|caveman-stats impl alts|Alt-A: client.session.messages() in command.execute.before → real tokens, 1 call, ⊥ own log needed. Alt-B: message.updated event → in-memory accumulate. Alt-C: keep SAVINGS_RATIO heuristic (current). savings estimate ∈ all alts still needs ratio (baseline unknowable)|opencode.ai/docs/sdk#sessions · opencode.ai/docs/plugins#events
 R6|CC spec multi-scope|CC v1.0.0 scope def = "a noun" (singular). multi-scope ⊥ in spec — ecosystem convention only. delimiters: `,` `/` `\`|conventionalcommits.org/en/v1.0.0
 R7|tooling multi-scope support|conventional-changelog #232 open ⊥ shipped. release-please ⊥ split multi-scope → renders verbatim. commitlint scope-enum accepts `,`/`/`/`\`|github.com/conventional-changelog/conventional-changelog/issues/232
-R8|release-notes action current state|`.github/actions/release-notes` line 63: `SCOPE=caveman,cavekit` → `**caveman,cavekit**:` — ugly ⊥ broken. fix (A): `"${SCOPE//,/, }"` display-only 1 line. fix (B): split `IFS=','` → bold each `**caveman**, **cavekit**: desc`. ⊥ tool dedup-per-scope|local:.github/actions/release-notes/action.yaml:63
+R8|release-notes action current state|`.github/actions/release-notes` line 63: `SCOPE=caveman,cavekit` → `**caveman,cavekit**:` — ugly ⊥ broken. fix: split `IFS=','` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`. each scope gets own release line.|local:.github/actions/release-notes/action.yaml:63
 
 ## §V INVARIANTS
 V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext → 1 `output.system.push()` (single slot). ⊥ spill system[2]. applyCaching caches system[0..1] only. [R1]
@@ -83,7 +83,7 @@ T15|.|test combinedSystemTransform overwrites merged transform key — ⊥ doubl
 T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
 T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
 T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
-T19|.|fix multi-scope scope display in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → bold each → `**caveman**, **cavekit**: desc`|R6,R7,R8
+T19|.|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
 
 ## §B BUGS
 id|date|cause|fix
