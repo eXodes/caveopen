@@ -90,7 +90,7 @@ T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + 
 T19|x|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
 T20|x|test V25/V26: ck:init empty-parts fallback + fs.copyFile error handling|V25,V26
 T21|x|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V27
-T22|.|fix session-init.ts:48: process.cwd() → ctx.directory in handleSessionCreated|V27
+T22|x|fix session-init.ts:48: process.cwd() → ctx.directory in handleSessionCreated|V27
 
 ## §B BUGS
 id|date|cause|fix

@@ -45,7 +45,7 @@ export async function handleSessionCreated(
 
   await initSession(
     sessionID,
-    event.properties.info.directory ?? process.cwd(),
+    event.properties.info.directory ?? ctx.directory,
   );
 }
 
