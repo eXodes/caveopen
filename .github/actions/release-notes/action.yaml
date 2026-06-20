@@ -59,9 +59,16 @@ runs:
             IS_BREAKING="${BASH_REMATCH[4]}"
             DESC="${BASH_REMATCH[5]}"
 
-            SCOPE_PART=""
-            [ -n "$SCOPE" ] && SCOPE_PART="**${SCOPE}**: "
-            ENTRY="- ${SCOPE_PART}${DESC} (${HASH})"$'\n'
+            ENTRY=""
+            if [ -z "$SCOPE" ]; then
+              ENTRY="- ${DESC} (${HASH})"$'\n'
+            else
+              IFS=',' read -ra SCOPES <<< "$SCOPE"
+              for S in "${SCOPES[@]}"; do
+                S="${S// /}"
+                ENTRY="${ENTRY}- **${S}**: ${DESC} (${HASH})"$'\n'
+              done
+            fi
 
             # Breaking commits go into breaking AND their type bucket
             [ -n "$IS_BREAKING" ] && BREAKING="${BREAKING}${ENTRY}"

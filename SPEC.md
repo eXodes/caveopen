@@ -83,7 +83,7 @@ T15|.|test combinedSystemTransform overwrites merged transform key — ⊥ doubl
 T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
 T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
 T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
-T19|.|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
+T19|x|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
 
 ## §B BUGS
 id|date|cause|fix
