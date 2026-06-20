@@ -11,8 +11,8 @@ Claude Code fires shell scripts at lifecycle points. OpenCode plugins register T
 | Claude Code hook                             | Trigger                             | OpenCode equivalent                                                  |
 | -------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------- |
 | `caveman-activate.js` (SessionStart)         | New session start                   | `experimental.chat.system.transform` + `session.created` event       |
-| `caveman-mode-tracker.js` (UserPromptSubmit) | Every user message                  | `chat.message` hook                                                  |
-| `/caveman-stats` command intercept           | UserPromptSubmit detects prefix     | `command.execute.before` hook                                        |
+| `caveman-mode-tracker.js` (UserPromptSubmit) | Every user message (natural lang)   | `chat.message` hook                                                  |
+| `/caveman` + `/caveman-stats` intercept      | Slash command execution             | `command.execute.before` hook                                        |
 | Stats write + statusline suffix              | During `/caveman-stats`             | `session.idle` event → write `~/.caveman/.caveman-history.jsonl`     |
 | `caveman-statusline.sh`                      | Shell subcommand in `settings.json` | TUI plugin: toast on mode change + `tui.prompt.append` compact badge |
 
@@ -80,7 +80,7 @@ event: async ({ event }) => {
 **Flag consumers:**
 
 - `experimental.chat.system.transform` — reads current mode to select ruleset
-- `chat.message` — reads current mode after `/caveman` switches
+- `command.execute.before` — writes flag on `/caveman <level>` slash command
 - `tui.prompt.append` — reads current mode to render badge
 
 Hook 1b is not about system prompt injection; it is flag lifecycle management. The two hooks are independent concerns that upstream bundled into one script.
@@ -94,7 +94,9 @@ Hook 1b is not about system prompt injection; it is flag lifecycle management. T
 **What it does:**
 
 1. Detects natural language activation ("activate caveman", "less tokens", "be brief")
-2. Syncs flag file when mode changes via `/caveman <level>` or natural language
+2. Detects natural language deactivation ("stop caveman", "normal mode")
+
+`/caveman <level>` slash commands are NOT handled here — OpenCode routes them through `command.execute.before` before `chat.message` fires. `chat.message` only sees regular user text.
 
 **OpenCode implementation:**
 
@@ -102,13 +104,6 @@ Hook 1b is not about system prompt injection; it is flag lifecycle management. T
 "chat.message": async (input, output) => {
   const text = extractTextFromParts(output.parts);
   const prompt = text.toLowerCase().trim();
-
-  // Mode switch: /caveman lite|full|ultra|off — checked first, returns early
-  const modeSwitch = parseModeCommand(prompt);
-  if (modeSwitch !== null) {
-    modeSwitch === "off" ? removeModeFlag() : writeModeFlag(modeSwitch);
-    return;
-  }
 
   // Natural language deactivation
   if (isDeactivationPhrase(prompt)) {
@@ -124,7 +119,7 @@ Hook 1b is not about system prompt injection; it is flag lifecycle management. T
 },
 ```
 
-**Logic order:** mode switch (`/caveman <level>`) checked first so it exits before activation/deactivation phrase matching. Deactivation before activation to avoid conflict when both phrases appear.
+**Logic order:** Deactivation before activation to avoid conflict when both phrases appear.
 
 **No per-turn reminder injected here.** Upstream's `caveman-mode-tracker.js` appended a short `additionalContext` reminder every turn because `caveman-activate.js` emits the ruleset only once (SessionStart), and context compaction can prune it. In CaveOpen, `experimental.chat.system.transform` fires before every inference and re-injects the full ruleset into `system[0]` — so the ruleset is always present regardless of compaction. Injecting a reminder here would be redundant and would consume one of the last-2 non-system cache slots `applyCaching()` marks.
 
@@ -136,12 +131,22 @@ Hook 1b is not about system prompt injection; it is flag lifecycle management. T
 
 **What it does:**
 
-- `/caveman-stats`: blocks the user's prompt, runs stats script, returns output as context
+- `/caveman [level]`: writes mode flag immediately — flag is read by `experimental.chat.system.transform` on the same inference, so the new ruleset applies without a round-trip. Empty/missing level → `"full"` (default). `off` → removes flag.
+- `/caveman-stats`: runs stats, returns output as context injected before inference.
+
+**Why `command.execute.before` for `/caveman`, not `chat.message`:** OpenCode routes slash commands through `command.execute.before` before `chat.message` fires. `chat.message` only receives regular user text — it would never see `/caveman lite` typed as a slash command.
 
 **OpenCode implementation:**
 
 ```ts
 "command.execute.before": async (input, output) => {
+  if (input.command === "caveman") {
+    const action = parseCavemanArg(input.arguments);
+    if (action === "off") removeModeFlag();
+    else if (action !== null) writeModeFlag(action);
+    return;
+  }
+
   if (input.command !== "caveman-stats") return;
 
   const args = input.arguments ?? "";
@@ -168,7 +173,9 @@ Hook 1b is not about system prompt injection; it is flag lifecycle management. T
 },
 ```
 
-**Flags:** `--all` shows lifetime history; `--since Nd` filters to last N days (e.g. `--since 7d`). Both read `~/.caveman/.caveman-history.jsonl` via `parseHistory(HISTORY_PATH, sinceDays)`.
+**`parseCavemanArg(args)`:** pure function — empty/undefined → `"full"`, `"off"` → `"off"`, valid mode (via `isValidMode`) → that mode, invalid → `null` (no-op). Single source of truth: mode list lives in `VALID_MODES` set in `config.ts`, not duplicated in a regex.
+
+**`/caveman-stats` flags:** `--all` shows lifetime history; `--since Nd` filters to last N days (e.g. `--since 7d`). Both read `~/.caveman/.caveman-history.jsonl` via `parseHistory(HISTORY_PATH, sinceDays)`.
 
 **Part shape:** requires `id` (via `partId()`), `sessionID`, and `messageID` (via `messageId()`) — both from `src/lib/cuid.ts`.
 
@@ -334,8 +341,8 @@ caveopen/
         index.ts                    # Module entry — composes caveman hooks, exports cavemanHooks()
         hooks/
           activation.ts             # experimental.chat.system.transform + session.created
-          message.ts                # chat.message: mode tracking (activation, deactivation, /caveman switches)
-          commands.ts               # command.execute.before: /caveman-stats, /caveman-*
+          message.ts                # chat.message: natural language activation/deactivation only
+          commands.ts               # command.execute.before: /caveman mode switch + /caveman-stats
           history.ts                # session.idle: write ~/.caveman/.caveman-history.jsonl
           tui.ts                    # tui.prompt.append: compact status badge (TUI only)
         lib/

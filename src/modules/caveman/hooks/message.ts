@@ -1,12 +1,6 @@
 import type { Part, TextPart } from "@opencode-ai/sdk";
 import type { Hooks, PluginInput } from "@opencode-ai/plugin";
-import type { CavemanMode } from "../lib/config.js";
-import {
-  isValidMode,
-  readConfig,
-  removeModeFlag,
-  writeModeFlag,
-} from "../lib/config.js";
+import { readConfig, removeModeFlag, writeModeFlag } from "../lib/config.js";
 
 const ACTIVATION_PHRASES = [
   "activate caveman",
@@ -29,16 +23,6 @@ function isDeactivationPhrase(prompt: string): boolean {
   return DEACTIVATION_PHRASES.some((p) => prompt.includes(p));
 }
 
-function parseModeCommand(prompt: string): CavemanMode | "off" | null {
-  const match = prompt.match(
-    /^\/caveman\s+(lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra|off)\s*$/,
-  );
-  if (!match) return null;
-  const level = match[1]!;
-  if (level === "off") return "off";
-  return isValidMode(level) ? level : null;
-}
-
 function extractTextFromParts(parts: Part[]): string {
   return parts
     .filter((p): p is TextPart => p.type === "text")
@@ -52,12 +36,6 @@ export function chatMessageHook(
   return async (input, output) => {
     const text = extractTextFromParts(output.parts);
     const prompt = text.toLowerCase().trim();
-
-    const modeSwitch = parseModeCommand(prompt);
-    if (modeSwitch !== null) {
-      modeSwitch === "off" ? removeModeFlag() : writeModeFlag(modeSwitch);
-      return;
-    }
 
     if (isDeactivationPhrase(prompt)) {
       removeModeFlag();

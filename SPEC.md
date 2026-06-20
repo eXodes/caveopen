@@ -56,7 +56,7 @@ V20: derivesSavings: mode null → {0,0}. else savedTok=round(out*ratio), savedU
 V21: caveopen.ts ! overwrite merged `experimental.chat.system.transform` w/ combinedSystemTransform when providers≥1. ⊥ leave mergeHooks sequential runner (double-push → V1 break). [caveopen.ts:71-73]
 V22: runCavememHook ! guard stdin write err (`proc.stdin.on('error')`). cavemem bin absent → ⊥ unhandled EPIPE/throw. [runner.ts:14] ?[NOT IMPL — T17]
 V23: `command.execute.before` handlers ! guard `output.parts.length > 0` before `output.parts[0]` access. ⊥ TypeError on empty parts. [cavekit/hooks/command.ts:29]
-V24: `/caveman` mode switch ! backed by `command.execute.before` handler writing mode flag, ⊥ rely solely on `chat.message` for slash dispatch. ?[OpenCode: verify `chat.message` fires for slash cmd user input — if ⊥, add handler]
+V24: `/caveman` mode switch ! backed by `command.execute.before` handler. Verified: OpenCode routes slash cmds → `command.execute.before` only; `chat.message` ⊥ fire for slash input. Handler calls `parseCavemanArg(args)`: empty→`full`, `off`→remove flag, valid mode via `isValidMode`→write flag, invalid→null (no-op). `chat.message` handles natural-lang activation/deactivation only.
 
 ## §T TASKS
 Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
@@ -79,7 +79,7 @@ T14|.|test ck:init copy/overwrite label|V18
 T15|.|test combinedSystemTransform overwrites merged transform key — ⊥ double-push|V21
 T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
 T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
-T18|.|verify OpenCode slash cmd fires `chat.message`; impl V24 `command.execute.before` caveman handler if ⊥|V24
+T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
 
 ## §B BUGS
 id|date|cause|fix
