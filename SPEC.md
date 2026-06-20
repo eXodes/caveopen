@@ -31,6 +31,9 @@ R2|cavemem store|local SQLite+FTS5, session-boundary hooks, sync write. session-
 R3|caveman savings (upstream)|upstream hook reads ~/.claude/projects/<hash>/<session>.jsonl for real token counts; savings still estimated via ratio on real output. hook decision:"block" → model ⊥ execute stats. CaveOpen ⊥ read this JSONL — OpenCode stores sessions in own SQLite ≠ Claude Code format|github.com/JuliusBrussee/caveman /skills/caveman-stats/SKILL.md
 R4|opencode msg tokens|Info.metadata.assistant has {tokens:{input,output,reasoning,cache:{read,write}},cost} per assistant msg. client.session.messages({path:{id:sessionID}}) → real per-msg data. command.execute.before: input.sessionID + client closure → fetch real session totals for /caveman-stats|github.com/anomalyco/opencode/blob/dev/packages/opencode/src/session/message.ts
 R5|caveman-stats impl alts|Alt-A: client.session.messages() in command.execute.before → real tokens, 1 call, ⊥ own log needed. Alt-B: message.updated event → in-memory accumulate. Alt-C: keep SAVINGS_RATIO heuristic (current). savings estimate ∈ all alts still needs ratio (baseline unknowable)|opencode.ai/docs/sdk#sessions · opencode.ai/docs/plugins#events
+R6|CC spec multi-scope|CC v1.0.0 scope def = "a noun" (singular). multi-scope ⊥ in spec — ecosystem convention only. delimiters: `,` `/` `\`|conventionalcommits.org/en/v1.0.0
+R7|tooling multi-scope support|conventional-changelog #232 open ⊥ shipped. release-please ⊥ split multi-scope → renders verbatim. commitlint scope-enum accepts `,`/`/`/`\`|github.com/conventional-changelog/conventional-changelog/issues/232
+R8|release-notes action current state|`.github/actions/release-notes` line 63: `SCOPE=caveman,cavekit` → `**caveman,cavekit**:` — ugly ⊥ broken. fix (A): `"${SCOPE//,/, }"` display-only 1 line. fix (B): split `IFS=','` → bold each `**caveman**, **cavekit**: desc`. ⊥ tool dedup-per-scope|local:.github/actions/release-notes/action.yaml:63
 
 ## §V INVARIANTS
 V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext → 1 `output.system.push()` (single slot). ⊥ spill system[2]. applyCaching caches system[0..1] only. [R1]
@@ -54,7 +57,7 @@ V18: ck:init: existed → "overwritten" label; else "copied". ∀ case → copy 
 V19: cuid → first char letter, [a-z0-9], default len 24. id prefixes `prt_` `ses_` `msg_`.
 V20: derivesSavings: mode null → {0,0}. else savedTok=round(out*ratio), savedUsd=cost*ratio, ratio∈SAVINGS_RATIO. ?[R3,R5: heuristic; Alt-A via R4 → real counts, ⊥ eliminates ratio]
 V21: caveopen.ts ! overwrite merged `experimental.chat.system.transform` w/ combinedSystemTransform when providers≥1. ⊥ leave mergeHooks sequential runner (double-push → V1 break). [caveopen.ts:71-73]
-V22: runCavememHook ! guard stdin write err (`proc.stdin.on('error')`). cavemem bin absent → ⊥ unhandled EPIPE/throw. [runner.ts:14] ?[NOT IMPL — T17]
+V22: runCavememHook ! guard stdin write err (`proc.stdin.on('error')`). cavemem bin absent → ⊥ unhandled EPIPE/throw. [runner.ts:14]
 V23: `command.execute.before` handlers ! guard `output.parts.length > 0` before `output.parts[0]` access. ⊥ TypeError on empty parts. [cavekit/hooks/command.ts:29]
 V24: `/caveman` mode switch ! backed by `command.execute.before` handler. Verified: OpenCode routes slash cmds → `command.execute.before` only; `chat.message` ⊥ fire for slash input. Handler calls `parseCavemanArg(args)`: empty→`full`, `off`→remove flag, valid mode via `isValidMode`→write flag, invalid→null (no-op). `chat.message` handles natural-lang activation/deactivation only.
 
@@ -80,6 +83,7 @@ T15|.|test combinedSystemTransform overwrites merged transform key — ⊥ doubl
 T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
 T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
 T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
+T19|.|fix multi-scope scope display in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → bold each → `**caveman**, **cavekit**: desc`|R6,R7,R8
 
 ## §B BUGS
 id|date|cause|fix
