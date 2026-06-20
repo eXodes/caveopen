@@ -40,7 +40,7 @@ V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext →
 V2: mergeHooks merges ALL same-key handlers → array, run sequential — incl `experimental.chat.system.transform`. caveopen overwrites that key post-merge w/ combinedSystemTransform (→V21). `event` & `command.execute.before` stay merged.
 V3: ∀ module → expose `<Module>Plugin` (standalone, own transform) & `<module>Hooks(ctx)`. ⊥ route standalone transform → combined path.
 V4: cavemem absent → skip graceful, ⊥ throw. ⊥ `@cavemem/*` import. talk via spawn `cavemem hook run <name>` only.
-V5: cavemem idle write (session.idle) ! last-assistant text non-empty before write. phantom/empty idle → ⊥ write.
+V5: cavemem idle write (session.idle) ! getLastAssistantText returns non-empty str before write. phantom/empty idle → ⊥ write. [turn-summary.ts:15]
 V6: combinedSystemTransform push iff ≥1 non-null provider. provider added iff mode active.
 V7: getCavememSystemPriorContext → null when skipPriorContext | ⊥ sessionID | empty ctx.
 V8: initSession: hasSession → no-op resolve. concurrent caller → share pending promise (⊥ double INSERT). cavemem INSERT OR IGNORE → first-wins. ?[R2: SQLite+hooks confirmed; first-wins unverified]
@@ -60,6 +60,9 @@ V21: caveopen.ts ! overwrite merged `experimental.chat.system.transform` w/ comb
 V22: runCavememHook ! guard stdin write err (`proc.stdin.on('error')`). cavemem bin absent → ⊥ unhandled EPIPE/throw. [runner.ts:14]
 V23: `command.execute.before` handlers ! guard `output.parts.length > 0` before `output.parts[0]` access. ⊥ TypeError on empty parts. [cavekit/hooks/command.ts:29]
 V24: `/caveman` mode switch ! backed by `command.execute.before` handler. Verified: OpenCode routes slash cmds → `command.execute.before` only; `chat.message` ⊥ fire for slash input. Handler calls `parseCavemanArg(args)`: empty→`full`, `off`→remove flag, valid mode via `isValidMode`→write flag, invalid→null (no-op). `chat.message` handles natural-lang activation/deactivation only.
+V25: ck:init ! push output part when initial output.parts empty: {id:partId(), messageID:messageId(), sessionID, type:"text", text:<copy_result_text>}. Silent copy ⊥ allowed. [cavekit/hooks/command.ts:25]
+V26: ck:init ! catch fs.copyFile failure → push error part w/ path & msg. Source-absent ⊥ propagate uncaught. [cavekit/hooks/command.ts:22]
+V27: cavemem eager-init fallback ! use ctx.directory (⊥ process.cwd()) at ∀ call sites (tool.ts, message.ts). ctx.directory=session root; process.cwd()=process launch dir (may differ). [tool.ts:20, message.ts:20]
 
 ## §T TASKS
 Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
@@ -84,6 +87,8 @@ T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
 T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
 T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
 T19|x|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
+T20|.|test V25/V26: ck:init empty-parts fallback + fs.copyFile error handling|V25,V26
+T21|.|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V27
 
 ## §B BUGS
 id|date|cause|fix
