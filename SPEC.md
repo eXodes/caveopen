@@ -27,13 +27,14 @@ Port caveman + cavekit v4 + cavemem → OpenCode native plugin (skills/commands/
 ## §R RESEARCH
 id|topic|finding|source
 R1|opencode cache window|applyCaching() marks first 2 system msgs + last 2 msgs ephemeral; assembly merges → 2 system slots. V1 confirmed.|deepwiki.com/sst/opencode/4.3-system-prompts-and-context · packages/opencode/src/provider/transform.ts
-R2|cavemem store|local SQLite+FTS5, session-boundary hooks, sync write. session-start persists session row. exact INSERT OR IGNORE first-wins ⊥ shown in README ?|github.com/JuliusBrussee/cavemem
+R2|cavemem store|local SQLite+FTS5, session-boundary hooks, sync write. `Storage.createSession()` = `INSERT OR IGNORE INTO sessions(id,ide,cwd,started_at,metadata) VALUES(?,?,?,?,?)` → first-wins CONFIRMED. SQLite serializes writes; ⊥ app-level concurrency guard in cavemem. CaveOpen `hasSession`+pending-promise = spawn optimization (⊥ correctness req).|cavemem 0.2.1 dist/chunk-T35V7EPZ.js Storage.createSession · dist/index.js sessionStart handler
 R3|caveman savings (upstream)|upstream hook reads ~/.claude/projects/<hash>/<session>.jsonl for real token counts; savings still estimated via ratio on real output. hook decision:"block" → model ⊥ execute stats. CaveOpen ⊥ read this JSONL — OpenCode stores sessions in own SQLite ≠ Claude Code format|github.com/JuliusBrussee/caveman /skills/caveman-stats/SKILL.md
 R4|opencode msg tokens|Info.metadata.assistant has {tokens:{input,output,reasoning,cache:{read,write}},cost} per assistant msg. client.session.messages({path:{id:sessionID}}) → real per-msg data. command.execute.before: input.sessionID + client closure → fetch real session totals for /caveman-stats|github.com/anomalyco/opencode/blob/dev/packages/opencode/src/session/message.ts
 R5|caveman-stats impl alts|Alt-A: client.session.messages() in command.execute.before → real tokens, 1 call, ⊥ own log needed. Alt-B: message.updated event → in-memory accumulate. Alt-C: keep SAVINGS_RATIO heuristic (current). savings estimate ∈ all alts still needs ratio (baseline unknowable)|opencode.ai/docs/sdk#sessions · opencode.ai/docs/plugins#events
 R6|CC spec multi-scope|CC v1.0.0 scope def = "a noun" (singular). multi-scope ⊥ in spec — ecosystem convention only. delimiters: `,` `/` `\`|conventionalcommits.org/en/v1.0.0
 R7|tooling multi-scope support|conventional-changelog #232 open ⊥ shipped. release-please ⊥ split multi-scope → renders verbatim. commitlint scope-enum accepts `,`/`/`/`\`|github.com/conventional-changelog/conventional-changelog/issues/232
 R8|release-notes action current state|`.github/actions/release-notes` line 63: `SCOPE=caveman,cavekit` → `**caveman,cavekit**:` — ugly ⊥ broken. fix: split `IFS=','` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`. each scope gets own release line.|local:.github/actions/release-notes/action.yaml:63
+R9|cavemem session-start source skip|sessionStart: if `input.source` set & `!== "startup"` → returns `""` (⊥ prior-ctx). separate from CaveOpen `skipPriorContext` config.|cavemem 0.2.1 dist/index.js sessionStart()
 
 ## §V INVARIANTS
 V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext → 1 `output.system.push()` (single slot). ⊥ spill system[2]. applyCaching caches system[0..1] only. [R1]
@@ -43,7 +44,7 @@ V4: cavemem absent → skip graceful, ⊥ throw. ⊥ `@cavemem/*` import. talk v
 V5: cavemem idle write (session.idle) ! getLastAssistantText returns non-empty str before write. phantom/empty idle → ⊥ write. [turn-summary.ts:15]
 V6: combinedSystemTransform push iff ≥1 non-null provider. provider added iff mode active.
 V7: getCavememSystemPriorContext → null when skipPriorContext | ⊥ sessionID | empty ctx.
-V8: initSession: hasSession → no-op resolve. concurrent caller → share pending promise (⊥ double INSERT). cavemem INSERT OR IGNORE → first-wins. ?[R2: SQLite+hooks confirmed; first-wins unverified]
+V8: initSession: hasSession → no-op resolve. concurrent caller → share pending promise (⊥ double INSERT). cavemem INSERT OR IGNORE → first-wins. [R2]
 V9: runCavememHook: spawn err | empty stdout | bad JSON → null. else `hookSpecificOutput.additionalContext ?? null`.
 V10: readModeFlag → null when file absent | mode ∉ {lite,full,ultra,wenyan-lite,wenyan-full,wenyan-ultra}.
 V11: caveman session.created: defaultMode `off` → removeModeFlag; else writeModeFlag(default) iff flag unset (⊥ overwrite live mode). NOTE: readConfig hardcoded `full` → `off` branch unreachable until config wired. [config.ts:76-77]
