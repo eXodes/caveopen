@@ -1,0 +1,94 @@
+import { describe, it, before, after, mock } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+// V10: readModeFlag → null when file absent | mode ∉ valid set.
+
+let _tmpDir = "";
+
+mock.module("node:os", {
+  namedExports: { homedir: () => _tmpDir },
+});
+
+type CavemanConfigModule = typeof import("../modules/caveman/lib/config.js");
+
+let config: CavemanConfigModule;
+
+before(async () => {
+  _tmpDir = mkdtempSync(join(tmpdir(), "caveopen-config-"));
+  config = await import("../modules/caveman/lib/config.js");
+});
+
+after(() => {
+  if (_tmpDir) rmSync(_tmpDir, { recursive: true, force: true });
+});
+
+describe("V10: isValidMode", () => {
+  it("valid modes return true", () => {
+    for (const m of [
+      "lite",
+      "full",
+      "ultra",
+      "wenyan-lite",
+      "wenyan-full",
+      "wenyan-ultra",
+    ]) {
+      assert.ok(config.isValidMode(m), `expected "${m}" to be valid`);
+    }
+  });
+
+  it("invalid modes return false", () => {
+    for (const m of ["", "medium", "off", "FULL", "lite-extra", "wenyan"]) {
+      assert.ok(!config.isValidMode(m), `expected "${m}" to be invalid`);
+    }
+  });
+});
+
+describe("V10: readModeFlag", () => {
+  it("file absent → null", () => {
+    try {
+      config.removeModeFlag();
+    } catch {}
+    assert.strictEqual(config.readModeFlag(), null);
+  });
+
+  it("valid mode → returned", () => {
+    mkdirSync(config.CAVEMAN_DIR, { recursive: true });
+    writeFileSync(config.MODE_FILE, "full", "utf8");
+    assert.strictEqual(config.readModeFlag(), "full");
+  });
+
+  it("invalid content → null", () => {
+    mkdirSync(config.CAVEMAN_DIR, { recursive: true });
+    writeFileSync(config.MODE_FILE, "bogus-mode", "utf8");
+    assert.strictEqual(config.readModeFlag(), null);
+  });
+
+  it("all valid modes read correctly", () => {
+    mkdirSync(config.CAVEMAN_DIR, { recursive: true });
+    for (const m of [
+      "lite",
+      "full",
+      "ultra",
+      "wenyan-lite",
+      "wenyan-full",
+      "wenyan-ultra",
+    ] as const) {
+      writeFileSync(config.MODE_FILE, m, "utf8");
+      assert.strictEqual(config.readModeFlag(), m);
+    }
+  });
+
+  it("writeModeFlag + readModeFlag roundtrip", () => {
+    config.writeModeFlag("ultra");
+    assert.strictEqual(config.readModeFlag(), "ultra");
+  });
+
+  it("removeModeFlag → readModeFlag returns null", () => {
+    config.writeModeFlag("lite");
+    config.removeModeFlag();
+    assert.strictEqual(config.readModeFlag(), null);
+  });
+});

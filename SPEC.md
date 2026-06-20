@@ -68,22 +68,22 @@ V27: cavemem eager-init fallback ! use ctx.directory (⊥ process.cwd()) at ∀ 
 Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
 
 id|status|task|cites
-T1|.|test mergeHooks fan-in sequential|V2
-T2|.|test combinedSystemTransform single-slot + skip-empty|V1,V6
-T3|.|test getCavememSystemPriorContext null paths|V7
-T4|.|test initSession pending dedup + hasSession no-op|V8
-T5|.|test runCavememHook spawn/empty/parse fallbacks|V9
-T6|.|test readModeFlag + isValidMode|V10
-T7|.|test caveman session.created activation logic|V11
-T8|.|test getSessionTokens assistant-only + null|V12
-T9|.|test derivesSavings + formatStats ratios|V20
-T10|.|test parseHistory + aggregateHistory skip-malformed|I.cmd
-T11|.|test caveman message mode-switch + phrases|V10
-T12|.|test cuid format + prefixes|V19
-T13|.|test cavemem graceful-absence (bin missing)|V4
-T14|.|test ck:init copy/overwrite label|V18
-T15|.|test combinedSystemTransform overwrites merged transform key — ⊥ double-push|V21
-T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
+T1|x|test mergeHooks fan-in sequential|V2
+T2|x|test combinedSystemTransform single-slot + skip-empty|V1,V6
+T3|x|test getCavememSystemPriorContext null paths|V7
+T4|x|test initSession pending dedup + hasSession no-op|V8
+T5|x|test runCavememHook spawn/empty/parse fallbacks|V9
+T6|x|test readModeFlag + isValidMode|V10
+T7|x|test caveman session.created activation logic|V11
+T8|x|test getSessionTokens assistant-only + null|V12
+T9|x|test derivesSavings + formatStats ratios|V20
+T10|x|test parseHistory + aggregateHistory skip-malformed|I.cmd
+T11|x|test caveman message mode-switch + phrases|V10
+T12|x|test cuid format + prefixes|V19
+T13|x|test cavemem graceful-absence (bin missing)|V4
+T14|x|test ck:init copy/overwrite label|V18
+T15|x|test combinedSystemTransform overwrites merged transform key — ⊥ double-push|V21
+T16|x|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
 T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
 T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
 T19|x|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
