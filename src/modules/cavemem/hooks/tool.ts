@@ -17,7 +17,7 @@ export function toolExecuteAfterHook(
     if (!hasSession(sessionID)) {
       try {
         const resp = await ctx.client.session.get({ path: { id: sessionID } });
-        const dir = resp.data?.directory ?? process.cwd();
+        const dir = resp.data?.directory ?? ctx.directory;
         await initSession(sessionID, dir);
       } catch {
         // best-effort; don't block tool hook

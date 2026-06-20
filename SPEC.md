@@ -88,7 +88,7 @@ T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in
 T18|x|verified `chat.message` ⊥ fire for slash cmds; impl `parseCavemanArg` + `command.execute.before` caveman handler; removed dead `parseModeCommand` from message.ts|V24
 T19|x|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCOPE` on `,` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`|R6,R7,R8
 T20|x|test V25/V26: ck:init empty-parts fallback + fs.copyFile error handling|V25,V26
-T21|.|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V27
+T21|x|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V27
 
 ## §B BUGS
 id|date|cause|fix
