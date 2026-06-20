@@ -11,6 +11,7 @@ function spawnNode(name: string, json: string): Promise<string> {
     });
     proc.on("close", () => resolve(out));
     proc.on("error", reject);
+    proc.stdin.on("error", () => {});
     proc.stdin.write(json);
     proc.stdin.end();
   });

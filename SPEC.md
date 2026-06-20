@@ -78,7 +78,7 @@ T13|.|test cavemem graceful-absence (bin missing)|V4
 T14|.|test ck:init copy/overwrite label|V18
 T15|.|test combinedSystemTransform overwrites merged transform key — ⊥ double-push|V21
 T16|.|test runCavememHook stdin-error guard — cavemem bin absent ⊥ throw|V22
-T17|.|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
+T17|x|impl V22 stdin-error noop guard in `runner.ts` + V23 parts-length guard in `cavekit/hooks/command.ts`|V22,V23
 T18|.|verify OpenCode slash cmd fires `chat.message`; impl V24 `command.execute.before` caveman handler if ⊥|V24
 
 ## §B BUGS

@@ -22,25 +22,27 @@ export function commandExecuteBeforeHook(
         `FORMAT.md overwritten at ${destFormat} (updated to latest).`
       : `FORMAT.md copied to ${destFormat}\nNext: run /ck:spec to create SPEC.md`;
 
-    output.parts.splice(
-      0,
-      output.parts.length,
-      {
-        id: output.parts[0].id,
-        messageID: output.parts[0].messageID,
-        sessionID: input.sessionID,
-        type: "text",
-        text,
-        ignored: true,
-      },
-      {
-        id: partId(),
-        messageID: output.parts[0].messageID,
-        sessionID: input.sessionID,
-        type: "text",
-        text: "FORMAT.md copied, no further action.",
-        synthetic: true,
-      },
-    );
+    if (output.parts.length > 0) {
+      output.parts.splice(
+        0,
+        output.parts.length,
+        {
+          id: output.parts[0].id,
+          messageID: output.parts[0].messageID,
+          sessionID: input.sessionID,
+          type: "text",
+          text,
+          ignored: true,
+        },
+        {
+          id: partId(),
+          messageID: output.parts[0].messageID,
+          sessionID: input.sessionID,
+          type: "text",
+          text: "FORMAT.md copied, no further action.",
+          synthetic: true,
+        },
+      );
+    }
   };
 }
