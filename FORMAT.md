@@ -4,7 +4,8 @@ Single file. Project root. Every cavekit command reads it.
 
 ## SECTIONS
 
-Fixed order. Fixed headers. Addressable.
+Fixed order, fixed headers, addressable. A section may be absent (skip it —
+e.g. §R only exists if `/ck:research` ran) but is never reordered.
 
 ```
 # SPEC
@@ -22,6 +23,13 @@ external surface. what world sees.
 - api: POST /x → 200 {id}
 - file: `config.yaml` schema …
 - env: `FOO_KEY` required
+
+## §R RESEARCH
+optional. external-knowledge log. pipe table. present only if `/research` ran.
+durable ∴ build never re-derives & never hallucinates lib facts.
+id|topic|finding|src
+R1|jwt lib|`jose` > `jsonwebtoken` — maintained, ESM, 0 deps|github.com/panva/jose
+R2|rate limit|token bucket ok @ our scale|<url>
 
 ## §V INVARIANTS
 numbered. testable. each ! MUST hold.
@@ -106,14 +114,34 @@ Human skims fast too. Symbols unambiguous.
 Big project → more sections, not more files. grep ceremony kills agent speed.
 If SPEC.md > 500 lines, compact §B (old bugs drop oldest) before splitting.
 
-## WRITES
+## WRITES — SECTIONED OWNERSHIP
+
+Each verb owns specific sections. No verb rewrites a section it does not own.
+That rule alone kills the "tool deleted my spec" failure mode.
 
 | command | writes | section |
 |---|---|---|
-| `ck:spec new` | creates | all |
-| `ck:spec amend` | edits | chosen |
-| `ck:spec bug` | appends | §B + §V |
-| `ck:build` | flips | §T status cell `.` → `~` → `x` |
-| `ck:check` | — | read only |
+| `/ck:grill` | sharpens | §G + §C (proposes; writes on OK) |
+| `/ck:spec new` | creates | all |
+| `/ck:spec amend` | edits | named only |
+| `/ck:spec bug:` | appends | §B + §V |
+| `/ck:research` | appends | §R |
+| `/ck:review` | hardens | §V (+ risk report, no silent rewrite) |
+| `/ck:build` | flips | §T status cell `.` → `~` → `x` |
+| `/ck:deepen` | proposes | §I + §V + §T (writes on OK) |
+| `/ck:check` | — | read only |
+
+`spec` is the general editor — any cross-cutting edit routes through it. Every
+other verb shows a diff and touches only its own sections. Compaction (dropping
+oldest §B rows when SPEC.md > 500 lines, per ONE FILE RULE) is the one sanctioned
+§B rewrite — route it through `spec`, which shows the diff before dropping rows.
+
+## RIGHT-SIZE
+
+Ceremony scales to blast radius, never to ego. One-line fix → just `/ck:build`.
+New feature in a shared module → `/ck:grill` then `/ck:review` first. The full
+grill→spec→research→review→build chain is for genuinely uncertain or
+high-blast-radius work, ⊥ for a typo. Skip any verb that would cost more
+attention than the change is worth.
 
 That is whole format.
