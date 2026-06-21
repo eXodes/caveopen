@@ -40,6 +40,7 @@ before(async () => {
 });
 
 const SID = "ses_ck_test";
+const CTX = { directory: "/tmp/caveopen-test" };
 
 function makeInput(command: string) {
   return { command, sessionID: SID, arguments: undefined };
@@ -63,7 +64,7 @@ describe("V18: ck:init copy/overwrite label", () => {
     copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: makeExistingParts() };
     await handler(makeInput("ck:init"), output);
 
@@ -80,7 +81,7 @@ describe("V18: ck:init copy/overwrite label", () => {
     copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: makeExistingParts() };
     await handler(makeInput("ck:init"), output);
 
@@ -95,7 +96,7 @@ describe("V25: ck:init empty-parts fallback", () => {
     copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
     await handler(makeInput("ck:init"), output);
 
@@ -108,7 +109,7 @@ describe("V25: ck:init empty-parts fallback", () => {
     existsValue = false;
     copyFileShouldThrow = null;
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
     await handler(makeInput("ck:init"), output);
 
@@ -122,7 +123,7 @@ describe("V26: ck:init copyFile error → error part", () => {
     existsValue = false;
     copyFileShouldThrow = new Error("EACCES: permission denied");
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
 
     let threw = false;
@@ -147,7 +148,7 @@ describe("V26: ck:init copyFile error → error part", () => {
     existsValue = false;
     copyFileShouldThrow = new Error("EACCES: permission denied");
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
     await handler(makeInput("ck:init"), output);
 
@@ -158,7 +159,7 @@ describe("V26: ck:init copyFile error → error part", () => {
 
 describe("misc: ck:init non-command passthrough", () => {
   it("non-ck:init command → no-op", async () => {
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
     await handler(makeInput("other-cmd"), output);
     assert.strictEqual(output.parts.length, 0);
@@ -169,7 +170,7 @@ describe("misc: ck:init non-command passthrough", () => {
     copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
-    const handler = commandExecuteBeforeHook({} as any);
+    const handler = commandExecuteBeforeHook(CTX as any);
     await handler(makeInput("ck:init"), { parts: makeExistingParts() });
 
     assert.strictEqual(copyFileCalls.length, 1);

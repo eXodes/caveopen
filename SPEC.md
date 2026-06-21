@@ -59,7 +59,7 @@ V19: cuid → first char letter, [a-z0-9], default len 24. id prefixes `prt_` `s
 V20: derivesSavings: mode null → {0,0}. else savedTok=round(out*ratio), savedUsd=cost*ratio, ratio∈SAVINGS_RATIO. ?[R3,R5: heuristic; Alt-A via R4 → real counts, ⊥ eliminates ratio]
 V21: caveopen.ts ! overwrite merged `experimental.chat.system.transform` w/ combinedSystemTransform when providers≥1. ⊥ leave mergeHooks sequential runner (double-push → V1 break). [caveopen.ts:71-73]
 V22: runCavememHook ! guard stdin write err (`proc.stdin.on('error')`). cavemem bin absent → ⊥ unhandled EPIPE/throw. [runner.ts:14]
-V23: `command.execute.before` handlers ! guard `output.parts.length > 0` before `output.parts[0]` access. ⊥ TypeError on empty parts. [cavekit/hooks/command.ts:29]
+V23: `command.execute.before` handlers ! guard `output.parts.length > 0` before `output.parts[0]` access. ⊥ TypeError on empty parts. [cavekit/hooks/command.ts:39]
 V24: `/caveman` mode switch ! backed by `command.execute.before` handler. Verified: OpenCode routes slash cmds → `command.execute.before` only; `chat.message` ⊥ fire for slash input. Handler calls `parseCavemanArg(args)`: empty→`full`, `off`→remove flag, valid mode via `isValidMode`→write flag, invalid→null (no-op). `chat.message` handles natural-lang activation/deactivation only.
 V25: ck:init ! push output part when initial output.parts empty: {id:partId(), messageID:messageId(), sessionID, type:"text", text:<copy_result_text>}. Silent copy ⊥ allowed. [cavekit/hooks/command.ts:25]
 V26: ck:init ! catch fs.copyFile failure → push error part w/ path & msg. Source-absent ⊥ propagate uncaught. [cavekit/hooks/command.ts:22]
@@ -91,6 +91,7 @@ T19|x|fix multi-scope in `.github/actions/release-notes/action.yaml`: split `SCO
 T20|x|test V25/V26: ck:init empty-parts fallback + fs.copyFile error handling|V25,V26
 T21|x|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V27
 T22|x|fix session-init.ts:48: process.cwd() → ctx.directory in handleSessionCreated|V27
+T23|x|assess & fix cavekit/hooks/command.ts:14: process.cwd() → ctx.directory for FORMAT.md dest (ctx.directory=session root ≠ process launch dir)|V27
 
 ## §B BUGS
 id|date|cause|fix

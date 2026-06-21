@@ -11,7 +11,7 @@ export function commandExecuteBeforeHook(
   return async (input, output) => {
     if (input.command !== "ck:init") return;
 
-    const destFormat = path.join(process.cwd(), "FORMAT.md");
+    const destFormat = path.join(ctx.directory, "FORMAT.md");
 
     const existed = existsSync(destFormat);
     const pluginDir = path.dirname(fileURLToPath(import.meta.url));
