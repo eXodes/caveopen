@@ -16,7 +16,7 @@ Port caveman + cavekit v4 + cavemem → OpenCode native plugin (skills/commands/
 - plugin: `CaveOpenPlugin` default export. opts `{ modes?: ("caveman"|"cavekit"|"cavemem")[], cavemem?: { skipPriorContext?: boolean } }`. no modes → all 3.
 - pkg exports: `.` `./caveman` `./cavekit` `./cavemem`. bin `caveopen` → dist/cli.js.
 - cli: `caveopen init [--modes M] [--project|--global] [--dry-run]` → npm-form plugin entry to opencode.json(c) + copy assets.
-- cmd: `/ck:init` → copy assets/FORMAT.md → cwd/FORMAT.md.
+- cmd: `/ck:init` → copy assets/FORMAT.md → ctx.directory/FORMAT.md (session root; ⊥ process.cwd()).
 - cmd: `/caveman-stats [--all] [--since Nd]` → session stats (+lifetime if flag).
 - cmd: `/caveman lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra|off` → mode switch.
 - file: `~/.caveman/.caveman-active` mode flag · `.caveman-history.jsonl` token log · `.caveman-statusline-suffix` badge.
@@ -53,7 +53,7 @@ V13: cli plugin entry = npm-form (`"caveopen"` | `["caveopen",{modes}]`). ⊥ `.
 V14: cli entry idempotent — dedup existing caveopen (string|array) pre-push. preserve other plugin entries.
 V15: stripJsonc preserve `//` & `/*` inside quoted strings. parseJsonc = strip comments + trailing commas → JSON.parse.
 V16: splicePluginArray/spliceMcpCavemem preserve surrounding JSONC comments + sibling keys. missing target key → throw.
-V17: tui config write ⊥ contain `mcp` key. spliceMcpCavemem output ⊥ double comma.
+V17: spliceMcpCavemem output ⊥ double comma. [tui write ⊥ impl — block commented cli.ts:338-377]
 V18: ck:init: existed → "overwritten" label; else "copied". ∀ case → copy file.
 V19: cuid → first char letter, [a-z0-9], default len 24. id prefixes `prt_` `ses_` `msg_`.
 V20: derivesSavings: mode null → {0,0}. else savedTok=round(out*ratio), savedUsd=cost*ratio, ratio∈SAVINGS_RATIO. ?[R3,R5: heuristic; Alt-A via R4 → real counts, ⊥ eliminates ratio]
