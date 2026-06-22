@@ -170,7 +170,7 @@ export const CaveOpenPlugin: Plugin = async (ctx, options) => {
   const providers: SystemContentProvider[] = [];
 
   if (modes.includes("caveman")) {
-    providers.push((_sessionID) => getCavemanSystemRuleset());
+    providers.push((sessionID) => getCavemanSystemRuleset());
   }
 
   if (modes.includes("cavemem")) {

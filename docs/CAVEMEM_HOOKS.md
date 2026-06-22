@@ -283,7 +283,7 @@ Identity + instructions stay cached. CaveOpen additions fall outside the window 
 
 | Feature                 | Official installer                      | CaveOpen                                                                     |
 | ----------------------- | --------------------------------------- | ---------------------------------------------------------------------------- |
-| Invocation              | `Bun.spawn` detached (fire-and-forget)  | `Bun.spawn` awaited (same CLI, captures stdout)                              |
+| Invocation              | `Bun.spawn` detached (fire-and-forget)  | `node:child_process.spawn` awaited (captures stdout)                         |
 | User prompt observation | ❌ Not wired                            | ✅ `chat.message` → `cavemem hook run user-prompt-submit`                    |
 | Turn summaries          | ❌ `stop` receives no text → no-op      | ✅ SDK fetch on `session.idle` → `cavemem hook run stop`                     |
 | Session rollup          | ❌ Not wired                            | ✅ `session.deleted` → `cavemem hook run session-end`                        |

@@ -37,7 +37,7 @@ Caveman uses `$CLAUDE_CONFIG_DIR/` for all state. CaveOpen uses `~/.caveman/` â€
 
 **Claude Code source:** `caveman-activate.js` (emit path)
 
-**What it does:** Injects full caveman ruleset into `system[0]` before every inference.
+**What it does:** Injects full caveman ruleset into `system[1]` before every inference.
 
 ```ts
 "experimental.chat.system.transform": async (input, output) => {

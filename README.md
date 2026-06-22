@@ -20,11 +20,14 @@ npx caveopen init
 The CLI patches your `opencode.json`, copies skills, commands, and agents into the right locations, and registers the plugin.
 
 ```
-✓ registered   caveopen → opencode.json
-✓ configured   cavemem MCP → opencode.json
-✓ added        15 skills
-✓ added        13 commands
-✓ added        3 agents
+✓ registered  plugin caveopen → global:config plugin
+✓ configured  mcp cavemem → global:config mcp
+✓ added  skills caveman → global:skills caveman
+  ... (15 skills total)
+✓ added  commands /caveman → global:commands /caveman
+  ... (13 commands total)
+✓ added  agents cavecrew-builder → global:agents cavecrew-builder
+  ... (3 agents total)
 
 caveopen configured
   Modes:  caveman, cavekit, cavemem
@@ -101,16 +104,16 @@ The store lives at `~/.cavemem/memory.db`.
 
 ### cavekit
 
-| Command                                            | Description                                         |
-| -------------------------------------------------- | --------------------------------------------------- |
-| `/ck:init`                                         | Copy/overwrite `FORMAT.md` to project root          |
-| `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend `SPEC.md`                           |
-| `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks with a validation loop         |
-| `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect `SPEC.md` vs. code (read-only)         |
-| `/ck:grill [<idea>\|--brutal\|--light]`            | Sharpen idea before spec via Q&A                    |
-| `/ck:research <question>`                          | Gather external knowledge → §R                      |
-| `/ck:review [§T.n\|--all]`                         | Adversarial spec review, go/no-go gate              |
-| `/ck:deepen [<module>\|--pick]`                    | Design-improvement pass, shrink one interface       |
+| Command                                            | Description                                   |
+| -------------------------------------------------- | --------------------------------------------- |
+| `/ck:init`                                         | Copy/overwrite `FORMAT.md` to project root    |
+| `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend `SPEC.md`                     |
+| `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks with a validation loop   |
+| `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect `SPEC.md` vs. code (read-only)   |
+| `/ck:grill [<idea>\|--brutal\|--light]`            | Sharpen idea before spec via Q&A              |
+| `/ck:research <question>`                          | Gather external knowledge → §R                |
+| `/ck:review [§T.n\|--all]`                         | Adversarial spec review, go/no-go gate        |
+| `/ck:deepen [<module>\|--pick]`                    | Design-improvement pass, shrink one interface |
 
 ### cavecrew agents
 
@@ -172,17 +175,17 @@ Each module registers TypeScript hooks into OpenCode's plugin lifecycle. Same-ke
 
 ```
 CaveOpenPlugin
-  ├── caveman  → chat.message, command.execute.before, event
-  ├── cavekit  → command.execute.before, config
-  ├── cavemem  → chat.message, tool.execute.after, event
+  ├── caveman    → chat.message, command.execute.before, event
+  ├── cavekit    → command.execute.before, config
+  ├── cavemem    → chat.message, tool.execute.after, event
   └── [combined] → experimental.chat.system.transform
-                    ruleset (caveman) + priorContext (cavemem) → one system[] push
+                   ruleset (caveman) + priorContext (cavemem) → one system[] push
 ```
 
 OpenCode concatenates all instructions (agent prompt, AGENTS.md, `config.instructions`) into `system[0]` before any transform runs. CaveOpen appends after that block using `push` — never `unshift` — so the host instructions always occupy the highest-priority cache slot. Merging caveman and cavemem into a single `push` keeps both within `applyCaching()`'s 2-slot window:
 
 ```
-system[0]  OpenCode instructions                 ← cached (largest block)
+system[0]  OpenCode instructions                  ← cached (largest block)
 system[1]  caveman ruleset + cavemem priorContext ← cached (merged into one slot)
 ```
 

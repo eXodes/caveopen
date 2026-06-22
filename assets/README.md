@@ -1,4 +1,4 @@
-# caveopen — installed quick-ref
+# caveopen
 
 Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins/caveopen/README.md` (global) or `.opencode/plugins/caveopen/README.md` (project).
 
@@ -19,15 +19,15 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 ### cavekit module
 
-| Command                                            | Description                              |
-| -------------------------------------------------- | ---------------------------------------- |
-| `/ck:init`                                         | Copy/overwrite FORMAT.md to project root |
-| `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend SPEC.md                  |
-| `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks                     |
-| `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect SPEC.md vs code (read-only) |
-| `/ck:grill [<idea>\|--brutal\|--light]`            | Sharpen idea before spec via Q&A         |
-| `/ck:research <question>`                          | Gather external knowledge → §R           |
-| `/ck:review [§T.n\|--all]`                         | Adversarial spec review, go/no-go gate   |
+| Command                                            | Description                                   |
+| -------------------------------------------------- | --------------------------------------------- |
+| `/ck:init`                                         | Copy/overwrite FORMAT.md to project root      |
+| `/ck:spec [idea\|from-code\|amend §X.n\|bug: ...]` | Create or amend SPEC.md                       |
+| `/ck:build [§T.n\|--next\|--all]`                  | Implement spec tasks                          |
+| `/ck:check [§V\|§I\|§T\|--all]`                    | Drift-detect SPEC.md vs code (read-only)      |
+| `/ck:grill [<idea>\|--brutal\|--light]`            | Sharpen idea before spec via Q&A              |
+| `/ck:research <question>`                          | Gather external knowledge → §R                |
+| `/ck:review [§T.n\|--all]`                         | Adversarial spec review, go/no-go gate        |
 | `/ck:deepen [<module>\|--pick]`                    | Design-improvement pass, shrink one interface |
 
 ---
@@ -38,22 +38,22 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 ### caveman
 
-| Hook                                 | Trigger                   | What it does                                                                                                                                                                                                                        |
-| ------------------------------------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `chat.message`                       | User submits a message    | Detects natural-language activation/deactivation phrases ("activate caveman", "stop caveman", etc.); writes or removes mode flag on disk; no output mutation. Slash commands not handled here — OpenCode routes them through `command.execute.before` before `chat.message` fires. |
-| `command.execute.before`             | `/caveman` or `/caveman-stats` command | `/caveman [level]`: writes mode flag — empty/missing args → `full`, `off` → removes flag, invalid → no-op. `/caveman-stats`: fetches live session token counts via client API; formats stats. Accepts `--all` (lifetime history) and `--since Nd` (last N days) flags; pushes text part into output. |
-| `event` (`session.created`)          | New session opened        | Reads `defaultMode` from config; writes mode flag if none set and default is not `off`                                                                                                                                              |
-| `event` (`session.idle`)             | Session goes idle         | Fetches session token counts; computes estimated saved tokens/USD; appends JSONL row to `~/.caveman/.caveman-history.jsonl`; writes statusline suffix                                                                               |
-| `event` (`tui.prompt.append`)        | TUI prompts for status    | Appends `[CAVEMAN:MODE] <stats-suffix>` badge via `tui.appendPrompt`; no-ops in headless                                                                                                                                            |
+| Hook                          | Trigger                                | What it does                                                                                                                                                                                                                                                                                         |
+| ----------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `chat.message`                | User submits a message                 | Detects natural-language activation/deactivation phrases ("activate caveman", "stop caveman", etc.); writes or removes mode flag on disk; no output mutation. Slash commands not handled here — OpenCode routes them through `command.execute.before` before `chat.message` fires.                   |
+| `command.execute.before`      | `/caveman` or `/caveman-stats` command | `/caveman [level]`: writes mode flag — empty/missing args → `full`, `off` → removes flag, invalid → no-op. `/caveman-stats`: fetches live session token counts via client API; formats stats. Accepts `--all` (lifetime history) and `--since Nd` (last N days) flags; pushes text part into output. |
+| `event` (`session.created`)   | New session opened                     | Reads `defaultMode` from config; writes mode flag if none set and default is not `off`                                                                                                                                                                                                               |
+| `event` (`session.idle`)      | Session goes idle                      | Fetches session token counts; computes estimated saved tokens/USD; appends JSONL row to `~/.caveman/.caveman-history.jsonl`; writes statusline suffix                                                                                                                                                |
+| `event` (`tui.prompt.append`) | TUI prompts for status                 | Appends `[CAVEMAN:MODE] <stats-suffix>` badge via `tui.appendPrompt`; no-ops in headless                                                                                                                                                                                                             |
 
 > **`experimental.chat.system.transform`** — caveman's individual handler is still registered by `cavemanHooks()` but is replaced inside `CaveOpenPlugin` by a single `combinedSystemTransform`. `getCavemanSystemRuleset()` is passed as a provider; it merges with cavemem's priorContext into one `system[]` push. The standalone `CavemanPlugin` (subpath import) still uses its own transform.
 
 ### cavekit
 
-| Hook                                      | Trigger                | What it does                                                                                                                                                                   |
-| ----------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `command.execute.before`                  | `/ck:init` command     | Copies (overwrites) `FORMAT.md` to `process.cwd()`; always replaces — ensures stale files update on plugin upgrade; replaces `output.parts` with an `ignored` result part + `synthetic` no-reply part to suppress LLM inference |
-| `config`                                  | Plugin load            | Registers `/ck:init` as a named slash command in the TUI command palette                                                                                                       |
+| Hook                     | Trigger            | What it does                                                                                                                                                                                                                    |
+| ------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command.execute.before` | `/ck:init` command | Copies (overwrites) `FORMAT.md` to `process.cwd()`; always replaces — ensures stale files update on plugin upgrade; replaces `output.parts` with an `ignored` result part + `synthetic` no-reply part to suppress LLM inference |
+| `config`                 | Plugin load        | Registers `/ck:init` as a named slash command in the TUI command palette                                                                                                                                                        |
 
 > **No system prompt injection.** Skills (`/ck:spec`, `/ck:build`, `/ck:check`) read `SPEC.md` directly from disk. Passive injection of spec context was removed — it caused hallucination on unrelated prompts.
 
@@ -61,13 +61,13 @@ Installed by `npx caveopen init`. This file lives at `~/.config/opencode/plugins
 
 Cavemem delegates to the **`cavemem` CLI** via `cavemem hook run <name>`. Each hook spawns the CLI, writes a JSON payload to stdin, and reads structured output from stdout. Requires `cavemem` installed separately — all hooks silently no-op if the CLI is absent.
 
-| Hook                                 | Trigger              | What it does                                                                                                                                                            |
-| ------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `chat.message`                       | User submits message | Ensures session is initialized (eager init guard), then fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation)      |
-| `tool.execute.after`                 | Any tool completes   | Ensures session is initialized (eager init guard for subagent sessions), then fires `cavemem hook run post-tool-use` with tool name, input, and output                  |
-| `event` (`session.created`)          | New session opened   | Fires `cavemem hook run session-start` with session ID + session directory; caches returned prior-session context string for system prompt inject                       |
-| `event` (`session.idle`)             | Session goes idle    | Fetches last assistant message via SDK; fires `cavemem hook run stop` with that text as `last_assistant_message`                                                        |
-| `event` (`session.deleted`)          | Session deleted      | Fires `cavemem hook run session-end`; evicts session from in-process context cache                                                                                      |
+| Hook                        | Trigger              | What it does                                                                                                                                                       |
+| --------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `chat.message`              | User submits message | Ensures session is initialized (eager init guard), then fires `cavemem hook run user-prompt-submit` with session ID + prompt text (write-only; no output mutation) |
+| `tool.execute.after`        | Any tool completes   | Ensures session is initialized (eager init guard for subagent sessions), then fires `cavemem hook run post-tool-use` with tool name, input, and output             |
+| `event` (`session.created`) | New session opened   | Fires `cavemem hook run session-start` with session ID + session directory; caches returned prior-session context string for system prompt inject                  |
+| `event` (`session.idle`)    | Session goes idle    | Fetches last assistant message via SDK; fires `cavemem hook run stop` with that text as `last_assistant_message`                                                   |
+| `event` (`session.deleted`) | Session deleted      | Fires `cavemem hook run session-end`; evicts session from in-process context cache                                                                                 |
 
 > **`experimental.chat.system.transform`** — cavemem's individual handler is still registered by `caveMemHooks()` but is replaced inside `CaveOpenPlugin` by `combinedSystemTransform`. `getCavememSystemPriorContext()` is passed as a provider; when `skipPriorContext: true` it returns `null` and no content is pushed. The standalone `CavememPlugin` (subpath import) still uses its own transform.
 
@@ -198,8 +198,8 @@ cavemem options:
 }
 ```
 
-| Option             | Type    | Default | Description                                                                                                                                                |
-| ------------------ | ------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Option             | Type    | Default | Description                                                                                                                                                                                                                       |
+| ------------------ | ------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `skipPriorContext` | boolean | `false` | Skip injecting prior-session summaries into the system prompt. Observations are still written to the store. Workaround for cavemem ≤ 0.2.1 cross-project leak ([cavemem#39](https://github.com/JuliusBrussee/cavemem/issues/39)). |
 
 ---
