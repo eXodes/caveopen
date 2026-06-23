@@ -35,6 +35,9 @@ R6|CC spec multi-scope|CC v1.0.0 scope def = "a noun" (singular). multi-scope �
 R7|tooling multi-scope support|conventional-changelog #232 open ⊥ shipped. release-please ⊥ split multi-scope → renders verbatim. commitlint scope-enum accepts `,`/`/`/`\`|github.com/conventional-changelog/conventional-changelog/issues/232
 R8|release-notes action current state|`.github/actions/release-notes` line 63: `SCOPE=caveman,cavekit` → `**caveman,cavekit**:` — ugly ⊥ broken. fix: split `IFS=','` → emit 1 `ENTRY` per scope → `- **caveman**: desc (hash)` + `- **cavekit**: desc (hash)`. each scope gets own release line.|local:.github/actions/release-notes/action.yaml:63
 R9|cavemem session-start source skip|sessionStart: if `input.source` set & `!== "startup"` → returns `""` (⊥ prior-ctx). separate from CaveOpen `skipPriorContext` config.|cavemem 0.2.1 dist/index.js sessionStart()
+R10|tool.execute.after signature|input:{tool,sessionID,callID,args:any} output:{title:string,output:string,metadata:any}. output typed `string` → `""` valid ⊥ null|github.com/anomalyco/opencode/blob/dev/packages/plugin/src/index.ts
+R11|tool output.output by type|standard tools (read/bash/glob/grep): output=content. task/agent tools: output=`""`, summary→title. `??` passes `""` through; `\|\|` falls back. [B2,V28]|SPEC.md §B B2 · src/test/cavemem-tool.test.ts
+R12|Plugin.trigger sequencing|iterates hooks array, calls each fn(input,output) load-order. sequential, ⊥ short-circuit unless hook throws|github.com/anomalyco/opencode/blob/dev/packages/opencode/src/plugin/index.ts
 
 ## §V INVARIANTS
 V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext → 1 `output.system.push()` (single slot). ⊥ spill system[2]. applyCaching caches system[0..1] only. [R1]
@@ -64,6 +67,7 @@ V24: `/caveman` mode switch ! backed by `command.execute.before` handler. Verifi
 V25: ck:init ! push output part when initial output.parts empty: {id:partId(), messageID:messageId(), sessionID, type:"text", text:<copy_result_text>}. Silent copy ⊥ allowed. [cavekit/hooks/command.ts:25]
 V26: ck:init ! catch fs.copyFile failure → push error part w/ path & msg. Source-absent ⊥ propagate uncaught. [cavekit/hooks/command.ts:22]
 V27: ∀ directory fallback call sites ! use ctx.directory (⊥ process.cwd()). ctx.directory=session root; process.cwd()=process launch dir (may differ). Covers eager-init (tool.ts:21, message.ts:21) & session-created handler (session-init.ts:48).
+V28: `toolExecuteAfterHook` ! use `output.output || output.title` (⊥ `??`). Task/agent tools return `output.output=""` — `??` passes `""` through; `||` falls back to title. [B2]
 
 ## §T TASKS
 Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
@@ -92,7 +96,9 @@ T20|x|test V25/V26: ck:init empty-parts fallback + fs.copyFile error handling|V2
 T21|x|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V27
 T22|x|fix session-init.ts:48: process.cwd() → ctx.directory in handleSessionCreated|V27
 T23|x|assess & fix cavekit/hooks/command.ts:14: process.cwd() → ctx.directory for FORMAT.md dest (ctx.directory=session root ≠ process launch dir)|V27
+T24|x|fix tool.ts:31 `output.output ?? output.title` → `output.output \|\| output.title` + test empty-string fallback|V28
 
 ## §B BUGS
 id|date|cause|fix
 B1|2026-06-21|session-init.ts:48 fallback uses process.cwd() ⊥ ctx.directory|V27
+B2|2026-06-24|`??` ⊥ `\|\|` in `tool_response` → Task/agent `output.output=""` → empty observation → cavemem drops|V28

@@ -28,7 +28,7 @@ export function toolExecuteAfterHook(
       session_id: sessionID,
       tool_name: input.tool,
       tool_input: input.args,
-      tool_response: output.output ?? output.title,
+      tool_response: output.output || output.title,
     });
   };
 }
