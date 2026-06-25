@@ -121,15 +121,15 @@ That rule alone kills the "tool deleted my spec" failure mode.
 
 | command | writes | section |
 |---|---|---|
-| `/ck:grill` | sharpens | §G + §C (proposes; writes on OK) |
-| `/ck:spec new` | creates | all |
-| `/ck:spec amend` | edits | named only |
-| `/ck:spec bug:` | appends | §B + §V |
-| `/ck:research` | appends | §R |
-| `/ck:review` | hardens | §V (+ risk report, no silent rewrite) |
-| `/ck:build` | flips | §T status cell `.` → `~` → `x` |
-| `/ck:deepen` | proposes | §I + §V + §T (writes on OK) |
-| `/ck:check` | — | read only |
+| `/grill` | sharpens | §G + §C (proposes; writes on OK) |
+| `/spec new` | creates | all |
+| `/spec amend` | edits | named only |
+| `/spec bug` | appends | §B + §V |
+| `/research` | appends | §R |
+| `/review` | hardens | §V (+ risk report, no silent rewrite) |
+| `/build` | flips | §T status cell `.` → `~` → `x` |
+| `/deepen` | proposes | §I + §V + §T (writes on OK) |
+| `/check` | — | read only |
 
 `spec` is the general editor — any cross-cutting edit routes through it. Every
 other verb shows a diff and touches only its own sections. Compaction (dropping
@@ -138,8 +138,8 @@ oldest §B rows when SPEC.md > 500 lines, per ONE FILE RULE) is the one sanction
 
 ## RIGHT-SIZE
 
-Ceremony scales to blast radius, never to ego. One-line fix → just `/ck:build`.
-New feature in a shared module → `/ck:grill` then `/ck:review` first. The full
+Ceremony scales to blast radius, never to ego. One-line fix → just `/build`.
+New feature in a shared module → `/grill` then `/review` first. The full
 grill→spec→research→review→build chain is for genuinely uncertain or
 high-blast-radius work, ⊥ for a typo. Skip any verb that would cost more
 attention than the change is worth.

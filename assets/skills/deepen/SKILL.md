@@ -62,11 +62,11 @@ Draft the change as spec edits, not a silent rewrite:
 - New/simpler §I shape for the module.
 - §V that locks the deepened invariant so a future build can't re-shallow it.
 - §T refactor row(s), each citing the §V/§I it serves.
-Hand to **spec** to write. Show the before/after interface so the user sees the shrink.
+Show before/after interface. Use `question` tool: "Deepen proposal ready. (a) hand to spec to write §I/§V/§T (b) adjust approach (c) cancel"
 
 ### 5. VERIFY BEHAVIOR HELD
 Refactor ≠ rewrite. Full suite green before you start AND after. A deepening that
-changes behavior is a feature in disguise — stop, route through spec + build.
+changes behavior is a feature in disguise — stop, route through `/spec` + `/build`.
 New interface gets a test proving the old callers still work.
 
 ## WHEN TO STOP

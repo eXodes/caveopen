@@ -1,14 +1,14 @@
 ---
 name: cavekit
-description: >
-  Caveman encoding for SPEC.md and spec-adjacent writes. Loaded by spec, build,
-  check. Cuts tokens ~75% vs prose while staying precise. Triggers on any write
+description: |
+  Caveman encoding for SPEC.md and spec-adjacent writes. Loaded by /spec, /build,
+  /check. Cuts tokens ~75% vs prose while staying precise. Triggers on any write
   to SPEC.md or when user says "caveman", "compress this", "be brief".
 ---
 
 # caveman — spec encoding
 
-Applies to `SPEC.md` writes, spec-referencing prose, backprop entries.
+Applies to SPEC.md writes, spec-referencing prose, backprop entries.
 Does NOT apply to code, error strings, commit messages, PR descriptions.
 
 ## GRAMMAR

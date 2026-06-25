@@ -22,7 +22,7 @@ A bad assumption caught here costs one question. Caught in §B it costs a bug.
 
 - Idea is one sentence & you can feel the holes.
 - Multiple readings of the goal exist & you are about to pick one silently.
-- Before spec new on anything non-trivial.
+- Before `/spec new` on anything non-trivial.
 - User asks to be challenged / stress-tested.
 
 Skip for a typo or a one-line fix. Grill scales to uncertainty, ⊥ to ego.
@@ -32,7 +32,13 @@ Skip for a typo or a one-line fix. Grill scales to uncertainty, ⊥ to ego.
 Use `question` tool before climbing the ladder:
 > "Grill intensity? (a) light — fill gaps only (b) normal — challenge assumptions (c) brutal — stress-test everything"
 
-Then one opening read of domain familiarity & idea lock before asking Q1.
+Then one opening read, not a quiz:
+1. How well does user know this domain? (sets question depth)
+2. How locked is the idea? (exploring vs committed)
+3. Pressure wanted: light / normal / brutal.
+
+Match it. Brutal grilling on a half-formed idea just demoralizes. Light
+grilling on a committed plan misses the load-bearing flaw.
 
 ## QUESTION LADDER
 
@@ -59,10 +65,12 @@ Stop climbing the moment the spec would be unambiguous. Do not ask all seven by 
 
 ## HANDOFF
 
-When done, emit compact block — goal line, constraint bullets, `?` unknowns — then use `question` tool:
+When done, emit a compact block — goal line, constraint bullets, surfaced
+unknowns as `?` — then use `question` tool:
 > "Ready to spec? (a) yes — invoke spec skill now (b) one more question (c) revisit an answer"
 
-Grill proposes; spec is the sole mutator. Never write SPEC.md directly.
+Hand to the **spec** skill to write §G/§C. Grill proposes;
+spec is the sole mutator. Never write SPEC.md directly.
 
 ## WHEN TO STOP
 
@@ -71,7 +79,7 @@ Done when ALL hold:
 - §C covers every non-negotiable the user stated or implied.
 - Every blocking unknown is either answered or parked as an explicit `?`.
 
-Unresolved blocking unknown that needs the outside world → recommend research, not a guess.
+Unresolved blocking unknown that needs the outside world → recommend `/research`, not a guess.
 
 ## BOUNDARIES
 

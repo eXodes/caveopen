@@ -23,7 +23,7 @@ Research is the external oracle: pull the real fact once, log it caveman, never 
 - A §C/§I/§V decision hinges on a lib, API, version, or pattern you are unsure of.
 - You are about to assume how an external dependency behaves.
 - The idea touches a domain with real prior art (auth, payments, crypto, rate-limit).
-- grill parked a `?` that the outside world must answer.
+- `/grill` parked a `?` that the outside world must answer.
 
 Skip when the build touches only code you already wrote. Research scales to the unknown, ⊥ to habit.
 
@@ -47,8 +47,8 @@ is the memory; the tab you read is not.
 > R3|refresh token|rotate on use, revoke family on reuse-detect|datatracker.ietf.org/doc/html/rfc6819#section-5.2.2.3
 
 ### 4. HAND OFF
-Emit the §R rows & hand to the **spec** skill to append. If a finding changes a
-constraint or interface, note the §C/§I edit for spec too. Research proposes;
+Emit the §R rows. Use `question` tool: "§R rows ready. (a) hand to spec to append (b) research more (c) discard"
+If a finding changes a constraint or interface, note the §C/§I edit for spec too. Research proposes;
 spec writes.
 
 ## SOURCE DISCIPLINE

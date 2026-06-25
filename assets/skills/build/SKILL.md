@@ -1,6 +1,6 @@
 ---
 name: build
-description: >
+description: |
   Plan-then-execute implementation against SPEC.md. Native single-thread
   loop, no sub-agents. On test or build failure, auto-invokes the backprop
   skill before retrying — a failed verification always considers whether
@@ -17,21 +17,26 @@ Single-thread native plan→execute. You are main agent. No swarm.
 ## LOAD
 
 1. Read `SPEC.md`. If missing → tell user to invoke the spec skill first. Stop.
-2. Invoke `cavekit` skill and read `FORMAT.md` once if not loaded.
-3. Parse invocation args:
+2. Load `cavekit` skill and read `FORMAT.md` once if not loaded.
+3. Read §R if present — external facts the build must honor, ⊥ re-derive or contradict.
+4. Parse invocation args:
    - `§T.n` → that task only
    - `--next` → lowest-numbered row with status `.` or `~`
    - `--all` or empty → every `.` row in §T order
 
+High blast radius (shared module, auth, data, money, public §I)? Run `/review` first. Trivial & reversible? Skip planning ceremony, just do step EXECUTE.
+
 ## PLAN
 
-Native plan mode. For chosen task(s):
+Native plan mode — you delegate to it, you do not reinvent task breakdown. For chosen task(s):
 
 1. Cite every §V invariant that applies. Plan must respect all.
 2. Cite every §I interface touched. Plan must preserve shape.
 3. List files to create / edit.
-4. List tests to add or update (one per invariant touched).
-5. Name verification command (test, build, lint).
+4. **Verification contract** — name the EXACT test(s) / acceptance criteria that
+   prove each §V touched. Which test, not "add tests". "Do TDD" alone backfires;
+   the spec says *what to check*. Each §V touched → a named test that fails first.
+5. Name verification command (test, build, lint) — this is the external oracle. Green = done; ⊥ "looks done".
 
 Use `question` tool: "Plan ready. (a) proceed (b) adjust scope (c) cancel". Skip if `--all` or single unambiguous task.
 
@@ -65,8 +70,8 @@ Rule: never silently fix root-cause without considering backprop. §B is the mem
 ## VERIFICATION
 
 Task `x` only if:
-- Verification command exits 0.
-- New test(s) added per plan.
+- Verification command (the oracle) exits 0.
+- Every §V touched has its named test from the verification contract, and it passes.
 - No §V invariant regressed (run full test suite at end).
 
 Use `question` tool before flipping to `x`: "T<n> done — verification passed. (a) mark complete (b) run again (c) needs fix". Never self-approve.

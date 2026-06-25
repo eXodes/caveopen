@@ -1,6 +1,6 @@
 ---
 name: backprop
-description: >
+description: |
   Bug → spec protocol. When a bug is found or a test fails, trace the cause,
   decide whether a new §V invariant would catch recurrence, append to §B.
   This is the one non-obvious thing SDD does that plan-then-execute doesn't.
@@ -15,10 +15,10 @@ That edit is backprop.
 
 ## WHEN TO BACKPROP
 
-- Test failed at build verification.
+- Test failed at `/build` verification.
 - User reports bug.
 - Post-mortem after production incident.
-- Check flags VIOLATE with root cause found.
+- `/check` flags VIOLATE with root cause found.
 
 ## SIX STEPS
 
@@ -87,4 +87,4 @@ Every backprop run produces:
 4. Code fix.
 5. One commit.
 
-No dashboards. No log files. `SPEC.md` + git is the full history.
+No dashboards. No log files. SPEC.md + git is the full history.

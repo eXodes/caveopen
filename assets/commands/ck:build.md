@@ -3,12 +3,8 @@ description: Plan-then-execute against SPEC.md. Native agent loop, no sub-agents
 argument-hint: "[§T.n | --all | --next]"
 ---
 
-Invoke the `build` skill with argument: $ARGUMENTS
-
-Target selection:
-
-- `§T.n` → that task only
-- `--next` → lowest-numbered pending task
-- `--all` or _(no argument)_ → every pending task in §T order
-
-Protocol: read SPEC.md → plan against §V/§I → confirm → execute → flip §T status → backprop on failure.
+Invoke the **build** skill. Treat `$ARGUMENTS` as the
+target (`§T.n`, `--next`, or `--all`). Plan in native plan mode, name the exact
+test that proves each §V touched (verification contract), read §R for external
+facts, execute, and auto-invoke backprop on failure. High blast radius? Suggest
+`/ck:review` first. Build only flips §T status; other spec edits route through spec.

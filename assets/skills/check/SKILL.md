@@ -1,6 +1,6 @@
 ---
 name: check
-description: >
+description: |
   Read-only drift detector. Diffs SPEC.md against current code and reports
   violations grouped by severity. Writes nothing — suggests remedies via
   the spec or build skills but never invokes them. Triggers when the user
@@ -13,9 +13,13 @@ description: >
 
 Pure diagnostic. Reports violations. Writes nothing. User decides remedy.
 
+Spec drifting silently from code is the #1 SDD failure mode. check is the
+detector. Run it after each `/build` and before each ship — drift caught here is
+a diff; drift caught in prod is a §B.
+
 ## LOAD
 
-1. Invoke `cavekit` skill and read `SPEC.md`. If missing → "no spec, nothing to check." Stop.
+1. Load `cavekit` skill and read `SPEC.md`. If missing → "no spec, nothing to check." Stop.
 2. Parse invocation args:
    - `§V` → check invariants only (default)
    - `§I` → check interfaces

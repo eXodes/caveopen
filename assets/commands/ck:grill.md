@@ -1,14 +1,9 @@
 ---
-description: Sharpen a fuzzy idea before spec. Calibrated interrogation, one question at a time.
-argument-hint: "[<idea> | --brutal | --light]"
+description: Sharpen a fuzzy idea into §G/§C before spec. Calibrated interrogation, one question at a time.
+argument-hint: "[idea | \"grill me\"]"
 ---
 
-Invoke the `grill` skill with argument: $ARGUMENTS
-
-Protocol: calibrate intensity → climb question ladder one rung at a time via `question` tool → handoff structured §G/§C to `spec` skill.
-
-- No argument → grill the idea currently in context
-- `--brutal` → skip calibration, max pressure
-- `--light` → fill gaps only, no adversarial pressure
-
-⊥ write SPEC.md directly. ⊥ ask multiple questions at once.
+Invoke the **grill** skill. Treat `$ARGUMENTS` as the
+idea to interrogate. Calibrate pressure, climb the question ladder one question
+at a time with a recommended answer each rung, and hand the sharpened §G/§C to
+the spec skill. Park unresolved unknowns as `?` items — never guess a constraint.
