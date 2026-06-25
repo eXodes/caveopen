@@ -261,14 +261,15 @@ function runCLI(): void {
   if (!Array.isArray(pluginsRaw)) throw new Error("internal: plugin not array");
 
   // Track pre-existing caveopen entry for ADDED|MODIFIED state
-  const hadCaveopen = pluginsRaw.some(
-    (e) => e === "caveopen" || (Array.isArray(e) && e[0] === "caveopen"),
-  );
+  const isCaveopenEntry = (e: unknown): boolean =>
+    (typeof e === "string" && (e === "caveopen" || e.startsWith("caveopen@"))) ||
+    (Array.isArray(e) &&
+      typeof e[0] === "string" &&
+      (e[0] === "caveopen" || e[0].startsWith("caveopen@")));
+  const hadCaveopen = pluginsRaw.some(isCaveopenEntry);
 
-  // npm-form — "caveopen" or ["caveopen", {"modes":"..."}]; idempotent
-  const filtered = pluginsRaw.filter(
-    (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
-  );
+  // npm-form — "caveopen@latest" or ["caveopen@latest", {"modes":"..."}]; idempotent
+  const filtered = pluginsRaw.filter((e) => !isCaveopenEntry(e));
   const modesArray =
     modes ?
       modes
@@ -277,7 +278,7 @@ function runCLI(): void {
         .filter(Boolean)
     : undefined;
   const entry: unknown =
-    modesArray ? ["caveopen", { modes: modesArray }] : "caveopen";
+    modesArray ? ["caveopen@latest", { modes: modesArray }] : "caveopen@latest";
   filtered.push(entry);
 
   // inject mcp.cavemem when cavemem mode included

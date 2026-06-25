@@ -68,6 +68,7 @@ V25: ck:init ! push output part when initial output.parts empty: {id:partId(), m
 V26: ck:init ! catch fs.copyFile failure → push error part w/ path & msg. Source-absent ⊥ propagate uncaught. [cavekit/hooks/command.ts:22]
 V27: ∀ directory fallback call sites ! use ctx.directory (⊥ process.cwd()). ctx.directory=session root; process.cwd()=process launch dir (may differ). Covers eager-init (tool.ts:21, message.ts:21) & session-created handler (session-init.ts:48).
 V28: `toolExecuteAfterHook` ! use `output.output || output.title` (⊥ `??`). Task/agent tools return `output.output=""` — `??` passes `""` through; `||` falls back to title. [B2]
+V29: cli plugin entry ! use `@latest` tag (`"caveopen@latest"` | `["caveopen@latest",{…}]`). bare `"caveopen"` → npm ⊥ re-resolve latest. dedup ! match `==="caveopen"` | `startsWith("caveopen@")` prefix (⊥ exact str only). [B3]
 
 ## §T TASKS
 Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
@@ -97,8 +98,10 @@ T21|x|test & fix V27: cavemem eager-init uses ctx.directory ⊥ process.cwd()|V2
 T22|x|fix session-init.ts:48: process.cwd() → ctx.directory in handleSessionCreated|V27
 T23|x|assess & fix cavekit/hooks/command.ts:14: process.cwd() → ctx.directory for FORMAT.md dest (ctx.directory=session root ≠ process launch dir)|V27
 T24|x|fix tool.ts:31 `output.output ?? output.title` → `output.output \|\| output.title` + test empty-string fallback|V28
+T25|x|fix cli.ts:280: entry `"caveopen"` → `"caveopen@latest"` + fix dedup (lines 264–270) to match `startsWith("caveopen@")` \| `==="caveopen"`|V29
 
 ## §B BUGS
 id|date|cause|fix
 B1|2026-06-21|session-init.ts:48 fallback uses process.cwd() ⊥ ctx.directory|V27
 B2|2026-06-24|`??` ⊥ `\|\|` in `tool_response` → Task/agent `output.output=""` → empty observation → cavemem drops|V28
+B3|2026-06-26|cli entry `"caveopen"` bare ⊥ version tag → npm resolves cached/pinned, ⊥ latest on re-init|V29

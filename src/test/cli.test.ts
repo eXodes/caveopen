@@ -218,43 +218,73 @@ describe("parseJsonc", () => {
 
 describe("plugin entry deduplication", () => {
   /** Simulate the dedup+push logic from cli.ts */
-  function applyEntry(plugins: unknown[], modes: string): unknown[] {
-    const filtered = plugins.filter(
-      (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
+  function isCaveopenEntry(e: unknown): boolean {
+    return (
+      (typeof e === "string" && (e === "caveopen" || e.startsWith("caveopen@"))) ||
+      (Array.isArray(e) &&
+        typeof e[0] === "string" &&
+        (e[0] === "caveopen" || e[0].startsWith("caveopen@")))
     );
+  }
+  function applyEntry(plugins: unknown[], modes: string): unknown[] {
+    const filtered = plugins.filter((e) => !isCaveopenEntry(e));
     const modesArray = modes
       ? modes.split(",").map((m) => m.trim()).filter(Boolean)
       : undefined;
-    const entry: unknown = modesArray ? ["caveopen", { modes: modesArray }] : "caveopen";
+    const entry: unknown = modesArray ? ["caveopen@latest", { modes: modesArray }] : "caveopen@latest";
     return [...filtered, entry];
   }
 
-  it("adds string entry when no modes", () => {
+  it("adds @latest string entry when no modes", () => {
     const result = applyEntry([], "");
-    assert.deepStrictEqual(result, ["caveopen"]);
+    assert.deepStrictEqual(result, ["caveopen@latest"]);
   });
 
-  it("adds array entry when modes specified", () => {
+  it("adds @latest array entry when modes specified", () => {
     const result = applyEntry([], "caveman");
-    assert.deepStrictEqual(result, [["caveopen", { modes: ["caveman"] }]]);
+    assert.deepStrictEqual(result, [["caveopen@latest", { modes: ["caveman"] }]]);
   });
 
-  it("idempotent: deduplicates existing string entry", () => {
+  it("idempotent: deduplicates bare 'caveopen' string entry", () => {
     const result = applyEntry(["caveopen"], "");
     assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0], "caveopen");
+    assert.strictEqual(result[0], "caveopen@latest");
   });
 
-  it("idempotent: deduplicates existing array entry", () => {
+  it("idempotent: deduplicates 'caveopen@latest' string entry", () => {
+    const result = applyEntry(["caveopen@latest"], "");
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(result[0], "caveopen@latest");
+  });
+
+  it("idempotent: deduplicates 'caveopen@1.2.3' version-pinned string entry", () => {
+    const result = applyEntry(["caveopen@1.2.3"], "");
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(result[0], "caveopen@latest");
+  });
+
+  it("idempotent: deduplicates existing array entry (bare)", () => {
     const result = applyEntry([["caveopen", { modes: ["caveman"] }]], "cavekit");
     assert.strictEqual(result.length, 1);
-    assert.deepStrictEqual(result[0], ["caveopen", { modes: ["cavekit"] }]);
+    assert.deepStrictEqual(result[0], ["caveopen@latest", { modes: ["cavekit"] }]);
+  });
+
+  it("idempotent: deduplicates existing array entry (@latest)", () => {
+    const result = applyEntry([["caveopen@latest", { modes: ["caveman"] }]], "cavekit");
+    assert.strictEqual(result.length, 1);
+    assert.deepStrictEqual(result[0], ["caveopen@latest", { modes: ["cavekit"] }]);
+  });
+
+  it("idempotent: deduplicates existing array entry (version-pinned)", () => {
+    const result = applyEntry([["caveopen@0.9.0", { modes: ["caveman"] }]], "");
+    assert.strictEqual(result.length, 1);
+    assert.strictEqual(result[0], "caveopen@latest");
   });
 
   it("preserves other plugin entries", () => {
     const result = applyEntry(["other-plugin", "caveopen"], "");
     assert.ok(result.includes("other-plugin"));
-    assert.ok(result.includes("caveopen"));
+    assert.ok(result.includes("caveopen@latest"));
     assert.strictEqual(result.length, 2);
   });
 
@@ -400,11 +430,19 @@ describe("spliceMcpCavemem", () => {
  * Simulate the tui.json injection path from runCLI().
  * entry: "caveopen" | ["caveopen", {modes}]
  */
+function isCaveopenEntryTui(e: unknown): boolean {
+  return (
+    (typeof e === "string" && (e === "caveopen" || e.startsWith("caveopen@"))) ||
+    (Array.isArray(e) &&
+      typeof e[0] === "string" &&
+      (e[0] === "caveopen" || e[0].startsWith("caveopen@")))
+  );
+}
 function applyTuiPlugin(tuiRaw: string, entry: unknown): string {
   const tuiConfig = parseJsonc(tuiRaw);
   if (!Array.isArray(tuiConfig.plugin)) tuiConfig.plugin = [];
   const filtered = (tuiConfig.plugin as unknown[]).filter(
-    (e) => e !== "caveopen" && !(Array.isArray(e) && e[0] === "caveopen"),
+    (e) => !isCaveopenEntryTui(e),
   );
   filtered.push(entry);
   if (/\"plugin\"\s*:/.test(tuiRaw)) {
