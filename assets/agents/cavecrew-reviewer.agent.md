@@ -9,11 +9,13 @@ mode: subagent
 permission:
   read: allow
   grep: allow
+  glob: allow
   bash:
     "*": deny
     "git diff*": allow
     "git log -p*": allow
     "git show*": allow
+    "git blame*": allow
   edit: deny
   todowrite: deny
 ---

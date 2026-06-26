@@ -47,7 +47,7 @@ R18|permission.task|controls subagents agent invokes via Task tool. glob, last-m
 R19|tools field deprecated|`tools` deprecated v1.1.1 → replaced by `permission`. `tools:{bash:false}` = `permission:{bash:"deny"}`. still supported compat|opencode.ai/docs/agents#tools-deprecated, opencode.ai/docs/permissions
 R20|agent mode & hidden|`mode`: `primary`\|`subagent`\|`all` (default). `hidden:true` → hides from `@` autocomplete; Task can still invoke if `permission.task` allows|opencode.ai/docs/agents#mode
 R21|permission inheritance|agent `permission` merges w/ global config; agent rules take precedence|opencode.ai/docs/permissions#agents
-R22|cavecrew-* format|existing agents correct: `permission` frontmatter w/ object-syntax bash. ⊥ legacy `tools` field. ⊥ change needed|assets/agents/*.agent.md (local, verified)
+R22|cavecrew-* format|agents use `permission` frontmatter w/ object-syntax bash. ⊥ legacy `tools` field. investigator bash scoped to `git log -S*` / `git grep*` / `find *`. reviewer +`glob: allow`.|assets/agents/*.agent.md (local, verified)
 
 ## §V INVARIANTS
 V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext → 1 `output.system.push()` (single slot). ⊥ spill system[2]. applyCaching caches system[0..1] only. [R1]

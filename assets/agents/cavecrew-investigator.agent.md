@@ -12,9 +12,11 @@ permission:
   glob: allow
   bash:
     "*": deny
-    "git log*": allow
+    "git log -S*": allow
     "git grep*": allow
+    "git ls-files*": allow
     "find *": allow
+    "wc -l*": allow
   edit: deny
   todowrite: deny
 ---
