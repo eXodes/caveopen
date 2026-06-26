@@ -1,0 +1,12 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "acd774bc2fb30f1e38da0b8ba185486b12c8c394",
+  "prompts": {},
+  "humans": {
+    "h_88d401a01dbd20": {
+      "author": "Exo Des <9076458+eXodes@users.noreply.github.com>"
+    }
+  }
+}
