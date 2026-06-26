@@ -38,6 +38,16 @@ R9|cavemem session-start source skip|sessionStart: if `input.source` set & `!== 
 R10|tool.execute.after signature|input:{tool,sessionID,callID,args:any} output:{title:string,output:string,metadata:any}. output typed `string` → `""` valid ⊥ null|github.com/anomalyco/opencode/blob/dev/packages/plugin/src/index.ts
 R11|tool output.output by type|standard tools (read/bash/glob/grep): output=content. task/agent tools: output=`""`, summary→title. `??` passes `""` through; `\|\|` falls back. [B2,V28]|SPEC.md §B B2 · src/test/cavemem-tool.test.ts
 R12|Plugin.trigger sequencing|iterates hooks array, calls each fn(input,output) load-order. sequential, ⊥ short-circuit unless hook throws|github.com/anomalyco/opencode/blob/dev/packages/opencode/src/plugin/index.ts
+R13|agent .md locations|global: `~/.config/opencode/agents/`; project: `.opencode/agents/`. filename = agent name|opencode.ai/docs/agents
+R14|agent .md frontmatter keys|`description`(required), `mode`, `model`, `temperature`, `top_p`, `steps`, `hidden`, `disable`, `permission`, `color`. body = system prompt|opencode.ai/docs/agents
+R15|agent permission keys|`read` `edit`(covers write/edit/apply_patch) `glob` `grep` `list` `bash` `task` `external_directory` `todowrite` `webfetch` `websearch` `lsp` `skill` `question` `doom_loop`. values: `allow`\|`ask`\|`deny`|opencode.ai/docs/agents#permissions
+R16|agent permission object syntax|`read` `edit` `glob` `grep` `list` `bash` `task` `external_directory` `lsp` `skill` accept `{glob→action}`. rest: shorthand only. last-match-wins → `"*"` first, specifics after|opencode.ai/docs/permissions#granular-rules
+R17|bash permission granular|`{"*":"ask","git *":"allow","git push *":"deny"}`. pattern matches parsed cmd incl args. `"git status"` ≠ `"git status *"` (latter req'd when args present)|opencode.ai/docs/permissions
+R18|permission.task|controls subagents agent invokes via Task tool. glob, last-match-wins. `deny` removes subagent from Task tool desc. users can `@` invoke regardless|opencode.ai/docs/agents#task-permissions
+R19|tools field deprecated|`tools` deprecated v1.1.1 → replaced by `permission`. `tools:{bash:false}` = `permission:{bash:"deny"}`. still supported compat|opencode.ai/docs/agents#tools-deprecated, opencode.ai/docs/permissions
+R20|agent mode & hidden|`mode`: `primary`\|`subagent`\|`all` (default). `hidden:true` → hides from `@` autocomplete; Task can still invoke if `permission.task` allows|opencode.ai/docs/agents#mode
+R21|permission inheritance|agent `permission` merges w/ global config; agent rules take precedence|opencode.ai/docs/permissions#agents
+R22|cavecrew-* format|existing agents correct: `permission` frontmatter w/ object-syntax bash. ⊥ legacy `tools` field. ⊥ change needed|assets/agents/*.agent.md (local, verified)
 
 ## §V INVARIANTS
 V1: [combined path · CaveOpenPlugin] caveman ruleset & cavemem priorContext → 1 `output.system.push()` (single slot). ⊥ spill system[2]. applyCaching caches system[0..1] only. [R1]
