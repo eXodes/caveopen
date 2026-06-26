@@ -1,0 +1,14 @@
+assets/agents/cavecrew-investigator.agent.md
+  h_88d401a01dbd20 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "0629922c70871a141485cff905457de08e306af2",
+  "prompts": {},
+  "humans": {
+    "h_88d401a01dbd20": {
+      "author": "Exo Des <9076458+eXodes@users.noreply.github.com>"
+    }
+  }
+}
