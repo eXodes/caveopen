@@ -1,4 +1,4 @@
-import { describe, it, before, after, mock } from "node:test";
+import { describe, it, beforeAll, afterAll, vi } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -7,27 +7,28 @@ import { tmpdir } from "node:os";
 // V11: caveman session.created: defaultMode full → writeModeFlag(full) iff flag unset.
 // NOTE: defaultMode hardcoded 'full'; 'off' branch unreachable until config wired [config.ts:76-77].
 
-let _tmpDir = "";
+const { state } = vi.hoisted(() => ({ state: { tmpDir: "" } }));
 
-mock.module("node:os", {
-  namedExports: { homedir: () => _tmpDir },
+vi.mock("node:os", async () => {
+  const actual = await vi.importActual<typeof import("node:os")>("node:os");
+  return { ...actual, homedir: () => state.tmpDir };
 });
 
-type ConfigModule = typeof import("../modules/caveman/lib/config.js");
-type ActivationModule = typeof import("../modules/caveman/hooks/activation.js");
+type ConfigModule = typeof import("../lib/config.js");
+type ActivationModule = typeof import("./activation.js");
 
 let cfg: ConfigModule;
 let activation: ActivationModule;
 
-before(async () => {
-  _tmpDir = mkdtempSync(join(tmpdir(), "caveopen-activation-"));
-  mkdirSync(join(_tmpDir, ".caveman"), { recursive: true });
-  cfg = await import("../modules/caveman/lib/config.js");
-  activation = await import("../modules/caveman/hooks/activation.js");
+beforeAll(async () => {
+  state.tmpDir = mkdtempSync(join(tmpdir(), "caveopen-activation-"));
+  mkdirSync(join(state.tmpDir, ".caveman"), { recursive: true });
+  cfg = await import("../lib/config.js");
+  activation = await import("./activation.js");
 });
 
-after(() => {
-  if (_tmpDir) rmSync(_tmpDir, { recursive: true, force: true });
+afterAll(() => {
+  if (state.tmpDir) rmSync(state.tmpDir, { recursive: true, force: true });
 });
 
 const mockCtx = {} as any;
@@ -73,7 +74,6 @@ describe("V11: caveman session.created activation", () => {
       makeSesCreatedEvent(undefined) as any,
       mockCtx,
     );
-    // Should not throw; mode unchanged
     assert.strictEqual(cfg.readModeFlag(), "full");
   });
 });

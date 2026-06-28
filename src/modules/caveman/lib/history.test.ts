@@ -1,4 +1,4 @@
-import { describe, it, before, after } from "node:test";
+import { describe, it, beforeAll, afterAll } from "vitest";
 import assert from "node:assert/strict";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -7,19 +7,19 @@ import {
   parseHistory,
   aggregateHistory,
   type HistoryEntry,
-} from "../modules/caveman/lib/history.js";
+} from "./history.js";
 
 // T10: parseHistory + aggregateHistory skip-malformed, filter, aggregate.
 
 let tmpDir: string;
 let histPath: string;
 
-before(() => {
+beforeAll(() => {
   tmpDir = mkdtempSync(join(tmpdir(), "caveopen-history-"));
   histPath = join(tmpDir, "history.jsonl");
 });
 
-after(() => {
+afterAll(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
@@ -81,7 +81,6 @@ describe("T10: parseHistory + aggregateHistory", () => {
     const old = Date.now() - 30 * 86_400_000;
     writeFileSync(histPath, entry(old, "full", 100, 40), "utf8");
     const result = parseHistory(histPath, 0);
-    // cutoff = 0 → ts >= 0 always true
     assert.strictEqual(result.length, 1);
   });
 

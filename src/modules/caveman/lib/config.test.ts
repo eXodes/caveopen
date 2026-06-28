@@ -1,28 +1,29 @@
-import { describe, it, before, after, mock } from "node:test";
+import { describe, it, beforeAll, afterAll, vi } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 // V10: readModeFlag → null when file absent | mode ∉ valid set.
 
-let _tmpDir = "";
+const { state } = vi.hoisted(() => ({ state: { tmpDir: "" } }));
 
-mock.module("node:os", {
-  namedExports: { homedir: () => _tmpDir },
+vi.mock("node:os", async () => {
+  const actual = await vi.importActual<typeof import("node:os")>("node:os");
+  return { ...actual, homedir: () => state.tmpDir };
 });
 
-type CavemanConfigModule = typeof import("../modules/caveman/lib/config.js");
+type CavemanConfigModule = typeof import("./config.js");
 
 let config: CavemanConfigModule;
 
-before(async () => {
-  _tmpDir = mkdtempSync(join(tmpdir(), "caveopen-config-"));
-  config = await import("../modules/caveman/lib/config.js");
+beforeAll(async () => {
+  state.tmpDir = mkdtempSync(join(tmpdir(), "caveopen-config-"));
+  config = await import("./config.js");
 });
 
-after(() => {
-  if (_tmpDir) rmSync(_tmpDir, { recursive: true, force: true });
+afterAll(() => {
+  if (state.tmpDir) rmSync(state.tmpDir, { recursive: true, force: true });
 });
 
 describe("V10: isValidMode", () => {

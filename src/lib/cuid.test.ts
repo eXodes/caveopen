@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { cuid, partId, sessionId, messageId } from "../lib/cuid.js";
+import { cuid, partId, sessionId, messageId } from "./cuid.js";
 
 // V19: cuid → first char letter, [a-z0-9], default len 24. id prefixes prt_ ses_ msg_.
 

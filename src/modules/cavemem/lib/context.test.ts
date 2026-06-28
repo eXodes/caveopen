@@ -1,10 +1,10 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach } from "vitest";
 import assert from "node:assert/strict";
 import {
   getCavememSystemPriorContext,
   setCachedContext,
   deleteCachedContext,
-} from "../modules/cavemem/lib/context.js";
+} from "./context.js";
 
 // V7: getCavememSystemPriorContext → null when skipPriorContext | ⊥ sessionID | empty ctx.
 

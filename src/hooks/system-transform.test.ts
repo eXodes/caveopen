@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { combinedSystemTransform } from "../hooks/system-transform.js";
+import { combinedSystemTransform } from "./system-transform.js";
 import { mergeHooks } from "../lib/merge-hooks.js";
 
 // V1: combined path → 1 output.system.push() (single slot).

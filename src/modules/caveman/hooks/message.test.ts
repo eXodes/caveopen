@@ -1,4 +1,4 @@
-import { describe, it, before, after, mock } from "node:test";
+import { describe, it, beforeAll, afterAll, vi } from "vitest";
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -6,27 +6,28 @@ import { tmpdir } from "node:os";
 
 // V10: caveman chat.message hook — activation/deactivation phrases.
 
-let _tmpDir = "";
+const { state } = vi.hoisted(() => ({ state: { tmpDir: "" } }));
 
-mock.module("node:os", {
-  namedExports: { homedir: () => _tmpDir },
+vi.mock("node:os", async () => {
+  const actual = await vi.importActual<typeof import("node:os")>("node:os");
+  return { ...actual, homedir: () => state.tmpDir };
 });
 
-type ConfigModule = typeof import("../modules/caveman/lib/config.js");
-type MessageModule = typeof import("../modules/caveman/hooks/message.js");
+type ConfigModule = typeof import("../lib/config.js");
+type MessageModule = typeof import("./message.js");
 
 let cfg: ConfigModule;
 let msgMod: MessageModule;
 
-before(async () => {
-  _tmpDir = mkdtempSync(join(tmpdir(), "caveopen-msg-"));
-  mkdirSync(join(_tmpDir, ".caveman"), { recursive: true });
-  cfg = await import("../modules/caveman/lib/config.js");
-  msgMod = await import("../modules/caveman/hooks/message.js");
+beforeAll(async () => {
+  state.tmpDir = mkdtempSync(join(tmpdir(), "caveopen-msg-"));
+  mkdirSync(join(state.tmpDir, ".caveman"), { recursive: true });
+  cfg = await import("../lib/config.js");
+  msgMod = await import("./message.js");
 });
 
-after(() => {
-  if (_tmpDir) rmSync(_tmpDir, { recursive: true, force: true });
+afterAll(() => {
+  if (state.tmpDir) rmSync(state.tmpDir, { recursive: true, force: true });
 });
 
 function makeOutput(text: string) {

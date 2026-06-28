@@ -1,4 +1,4 @@
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import {
   stripJsonc,
@@ -8,7 +8,7 @@ import {
   fmtSymbol,
   colorLabel,
   blue,
-} from "../cli.js";
+} from "./cli.js";
 
 describe("fmtSymbol", () => {
   it("plain symbols when tty=false", () => {
@@ -24,7 +24,6 @@ describe("fmtSymbol", () => {
     assert.ok(ok.includes("✓"), "ok missing ✓");
     assert.ok(warn.includes("⚠"), "warn missing ⚠");
     assert.ok(fail.includes("✗"), "fail missing ✗");
-    // ANSI reset code present
     assert.ok(ok.includes("\x1b[0m"), "ok missing reset");
     assert.ok(warn.includes("\x1b[0m"), "warn missing reset");
     assert.ok(fail.includes("\x1b[0m"), "fail missing reset");
@@ -32,10 +31,7 @@ describe("fmtSymbol", () => {
 
   it("ok=green, warn=yellow, fail=red ANSI codes", () => {
     assert.ok(fmtSymbol("ok", true).startsWith("\x1b[32m"), "ok not green");
-    assert.ok(
-      fmtSymbol("warn", true).startsWith("\x1b[33m"),
-      "warn not yellow",
-    );
+    assert.ok(fmtSymbol("warn", true).startsWith("\x1b[33m"), "warn not yellow");
     assert.ok(fmtSymbol("fail", true).startsWith("\x1b[31m"), "fail not red");
   });
 
@@ -43,10 +39,7 @@ describe("fmtSymbol", () => {
     for (const type of ["ok", "warn", "fail"] as const) {
       const plain = fmtSymbol(type, false);
       const ansi = fmtSymbol(type, true);
-      assert.ok(
-        ansi.includes(plain),
-        `ansi form missing bare symbol for ${type}`,
-      );
+      assert.ok(ansi.includes(plain), `ansi form missing bare symbol for ${type}`);
     }
   });
 });
@@ -103,15 +96,10 @@ describe("colorLabel", () => {
   });
 });
 
-// ─── config output line format ─────────────────────────────────────
-
 describe("config output line format", () => {
   it("plugin line plain: registered  plugin caveopen → global:config plugin", () => {
     const line = `${colorLabel("registered", false)}  ${blue("plugin", false)} caveopen → ${blue("global:config", false)} plugin`;
-    assert.strictEqual(
-      line,
-      "registered  plugin caveopen → global:config plugin",
-    );
+    assert.strictEqual(line, "registered  plugin caveopen → global:config plugin");
   });
 
   it("mcp line plain: configured  mcp cavemem → global:config mcp", () => {
@@ -136,8 +124,6 @@ describe("config output line format", () => {
     assert.ok(line.endsWith(" plugin"), "type plain at end of line");
   });
 });
-
-// ─── stripJsonc ────────────────────────────────────────────────
 
 describe("stripJsonc", () => {
   it("passes plain JSON unchanged", () => {
@@ -179,8 +165,6 @@ describe("stripJsonc", () => {
   });
 });
 
-// ─── parseJsonc ────────────────────────────────────────────────────
-
 describe("parseJsonc", () => {
   it("parses plain JSON", () => {
     const obj = parseJsonc('{"a":1,"b":2}');
@@ -214,10 +198,7 @@ describe("parseJsonc", () => {
   });
 });
 
-// ─── npm-form deduplication (logic extracted) ────────────────────────
-
 describe("plugin entry deduplication", () => {
-  /** Simulate the dedup+push logic from cli.ts */
   function isCaveopenEntry(e: unknown): boolean {
     return (
       (typeof e === "string" && (e === "caveopen" || e.startsWith("caveopen@"))) ||
@@ -294,8 +275,6 @@ describe("plugin entry deduplication", () => {
   });
 });
 
-// ─── splicePluginArray ──────────────────────────────────────────────
-
 describe("splicePluginArray", () => {
   it("replaces plugin array preserving surrounding JSONC comments", () => {
     const raw = `{
@@ -304,11 +283,9 @@ describe("splicePluginArray", () => {
   "mcp": {}
 }`;
     const result = splicePluginArray(raw, ["caveopen"]);
-    // JSONC comments preserved
     assert.ok(result.includes("// top comment"));
     assert.ok(result.includes("// inline comment"));
     assert.ok(result.includes('"mcp"'));
-    // new array spliced in
     assert.ok(result.includes('["caveopen"]'));
     assert.ok(!result.includes('"old-plugin"'));
   });
@@ -351,8 +328,6 @@ describe("splicePluginArray", () => {
     assert.ok(result.includes('["caveopen"]'));
   });
 });
-
-// ─── spliceMcpCavemem ───────────────────────────────────────────────
 
 describe("spliceMcpCavemem", () => {
   const cavememEntry = { type: "local", command: ["npx", "cavemem", "mcp"] };
@@ -400,8 +375,6 @@ describe("spliceMcpCavemem", () => {
   });
 
   it("idempotent-safe: does not double-inject (splice path gates on !hasMcpCavemem)", () => {
-    // spliceMcpCavemem itself has no idempotency guard — gate is in caller
-    // verify it injects exactly one cavemem key
     const raw = `{"mcp":{}}`;
     const once = spliceMcpCavemem(raw, cavememEntry);
     const parsed = JSON.parse(once) as Record<string, unknown>;
@@ -410,12 +383,9 @@ describe("spliceMcpCavemem", () => {
   });
 
   it("trailing comma in mcp object → ⊥ double comma → valid JSON", () => {
-    // JSONC mcp object where existing entry ends with trailing comma
     const raw = `{"mcp":{"other":{"type":"remote"},"url":"x",}}`;
     const result = spliceMcpCavemem(raw, cavememEntry);
-    // output must not contain double comma
     assert.ok(!result.includes(",,"), `double comma in: ${result}`);
-    // strip trailing commas to parse as JSON
     const clean = result.replace(/,(\s*[}\]])/g, "$1");
     const parsed = JSON.parse(clean) as Record<string, unknown>;
     const mcp = parsed.mcp as Record<string, unknown>;
@@ -424,12 +394,6 @@ describe("spliceMcpCavemem", () => {
   });
 });
 
-// ─── tui config injection ───────────────────────────────────────────
-
-/**
- * Simulate the tui.json injection path from runCLI().
- * entry: "caveopen" | ["caveopen", {modes}]
- */
 function isCaveopenEntryTui(e: unknown): boolean {
   return (
     (typeof e === "string" && (e === "caveopen" || e.startsWith("caveopen@"))) ||

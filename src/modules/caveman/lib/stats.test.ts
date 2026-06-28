@@ -1,9 +1,9 @@
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import {
   derivesSavings,
   formatStats,
-} from "../modules/caveman/lib/stats.js";
+} from "./stats.js";
 
 // V20: derivesSavings: mode null → {0,0}. else savedTok=round(out*ratio), savedUsd=cost*ratio.
 
@@ -52,7 +52,7 @@ describe("V20: derivesSavings", () => {
   it("zero output → zero saved tokens; savedUsd still cost*ratio", () => {
     const r = derivesSavings({ outputTokens: 0, actualCost: 0.5, mode: "full" });
     assert.strictEqual(r.estSavedTokens, 0);
-    assert.ok(Math.abs(r.estSavedUsd - 0.2) < 0.000001); // 0.5 * 0.4
+    assert.ok(Math.abs(r.estSavedUsd - 0.2) < 0.000001);
   });
 });
 

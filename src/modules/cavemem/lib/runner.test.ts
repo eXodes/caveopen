@@ -1,4 +1,4 @@
-import { describe, it, before, mock } from "node:test";
+import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 
@@ -11,54 +11,51 @@ type SpawnBehavior =
   | { type: "close"; stdout: string }
   | { type: "stdin-error"; stdout: string; stdinErr: Error };
 
-let spawnBehavior: SpawnBehavior = { type: "close", stdout: "" };
+const { spawnState, spawn } = vi.hoisted(() => {
+  const spawnState = { behavior: { type: "close", stdout: "" } as SpawnBehavior };
 
-mock.module("node:child_process", {
-  namedExports: {
-    spawn: () => {
-      const behavior = spawnBehavior;
-      const stdout = new EventEmitter();
-      const stdin = new EventEmitter() as NodeJS.WritableStream & EventEmitter;
-      (stdin as any).write = () => true;
-      (stdin as any).end = () => {};
+  const spawn = vi.fn(() => {
+    const behavior = spawnState.behavior;
+    const stdout = new EventEmitter();
+    const stdin = new EventEmitter() as NodeJS.WritableStream & EventEmitter;
+    (stdin as any).write = () => true;
+    (stdin as any).end = () => {};
 
-      const proc = new EventEmitter() as any;
-      proc.stdout = stdout;
-      proc.stdin = stdin;
+    const proc = new EventEmitter() as any;
+    proc.stdout = stdout;
+    proc.stdin = stdin;
 
-      // Schedule events after current tick so listeners have time to attach
-      setTimeout(() => {
-        if (behavior.type === "spawn-error") {
-          proc.emit("error", behavior.err);
-        } else if (behavior.type === "close") {
-          if (behavior.stdout) stdout.emit("data", Buffer.from(behavior.stdout));
-          proc.emit("close");
-        } else if (behavior.type === "stdin-error") {
-          if (behavior.stdout)
-            stdout.emit("data", Buffer.from(behavior.stdout));
-          stdin.emit("error", behavior.stdinErr);
-          proc.emit("close");
-        }
-      }, 0);
+    setTimeout(() => {
+      if (behavior.type === "spawn-error") {
+        proc.emit("error", behavior.err);
+      } else if (behavior.type === "close") {
+        if (behavior.stdout) stdout.emit("data", Buffer.from(behavior.stdout));
+        proc.emit("close");
+      } else if (behavior.type === "stdin-error") {
+        if (behavior.stdout) stdout.emit("data", Buffer.from(behavior.stdout));
+        stdin.emit("error", behavior.stdinErr);
+        proc.emit("close");
+      }
+    }, 0);
 
-      return proc;
-    },
-  },
+    return proc;
+  });
+
+  return { spawnState, spawn };
 });
 
-let runCavememHook: (
-  name: string,
-  payload: object,
-) => Promise<string | null>;
+vi.mock("node:child_process", () => ({ spawn }));
 
-before(async () => {
-  const mod = await import("../modules/cavemem/lib/runner.js");
+let runCavememHook: (name: string, payload: object) => Promise<string | null>;
+
+beforeAll(async () => {
+  const mod = await import("./runner.js");
   runCavememHook = mod.runCavememHook;
 });
 
 describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   it("spawn error → null", async () => {
-    spawnBehavior = {
+    spawnState.behavior = {
       type: "spawn-error",
       err: new Error("ENOENT: cavemem not found"),
     };
@@ -69,7 +66,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 
   it("empty stdout → null", async () => {
-    spawnBehavior = { type: "close", stdout: "" };
+    spawnState.behavior = { type: "close", stdout: "" };
     assert.strictEqual(
       await runCavememHook("session-start", { session_id: "x" }),
       null,
@@ -77,7 +74,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 
   it("whitespace-only stdout → null", async () => {
-    spawnBehavior = { type: "close", stdout: "   \n  " };
+    spawnState.behavior = { type: "close", stdout: "   \n  " };
     assert.strictEqual(
       await runCavememHook("session-start", { session_id: "x" }),
       null,
@@ -85,7 +82,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 
   it("bad JSON → null", async () => {
-    spawnBehavior = { type: "close", stdout: "not-json" };
+    spawnState.behavior = { type: "close", stdout: "not-json" };
     assert.strictEqual(
       await runCavememHook("session-start", { session_id: "x" }),
       null,
@@ -93,7 +90,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 
   it("valid JSON with additionalContext → returns it", async () => {
-    spawnBehavior = {
+    spawnState.behavior = {
       type: "close",
       stdout: JSON.stringify({
         hookSpecificOutput: { additionalContext: "prior ctx" },
@@ -106,7 +103,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 
   it("valid JSON without additionalContext → null", async () => {
-    spawnBehavior = {
+    spawnState.behavior = {
       type: "close",
       stdout: JSON.stringify({ hookSpecificOutput: {} }),
     };
@@ -117,7 +114,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 
   it("null additionalContext → null", async () => {
-    spawnBehavior = {
+    spawnState.behavior = {
       type: "close",
       stdout: JSON.stringify({
         hookSpecificOutput: { additionalContext: null },
@@ -132,7 +129,7 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
 
 describe("V4/V22: cavemem absence + stdin-error guard", () => {
   it("V4: ENOENT → null, no throw", async () => {
-    spawnBehavior = {
+    spawnState.behavior = {
       type: "spawn-error",
       err: Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
     };
@@ -148,7 +145,7 @@ describe("V4/V22: cavemem absence + stdin-error guard", () => {
   });
 
   it("V22: stdin EPIPE → null, no unhandled throw", async () => {
-    spawnBehavior = {
+    spawnState.behavior = {
       type: "stdin-error",
       stdout: "",
       stdinErr: Object.assign(new Error("EPIPE"), { code: "EPIPE" }),

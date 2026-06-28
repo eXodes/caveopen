@@ -1,41 +1,40 @@
-import { describe, it, before, mock } from "node:test";
+import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 
 // V18: ck:init: existed → "overwritten"; else → "copied". ∀ case → copy file.
 // V25: empty parts → push new part with copy result text.
 // V26: copyFile failure → push error part w/ path & msg.
 
-let existsValue = false;
-let copyFileShouldThrow: Error | null = null;
-const copyFileCalls: Array<[string, string]> = [];
-
-mock.module("node:fs", {
-  namedExports: {
-    existsSync: (_path: string) => existsValue,
-  },
+const { fsState, copyFileCalls, copyFile } = vi.hoisted(() => {
+  const fsState = {
+    existsValue: false,
+    copyFileShouldThrow: null as Error | null,
+  };
+  const copyFileCalls: Array<[string, string]> = [];
+  const copyFile = vi.fn(async (src: string, dest: string) => {
+    if (fsState.copyFileShouldThrow) throw fsState.copyFileShouldThrow;
+    copyFileCalls.push([src, dest]);
+  });
+  return { fsState, copyFileCalls, copyFile };
 });
 
-mock.module("node:fs/promises", {
-  defaultExport: {
-    copyFile: async (src: string, dest: string) => {
-      if (copyFileShouldThrow) throw copyFileShouldThrow;
-      copyFileCalls.push([src, dest]);
-    },
-  },
-  namedExports: {
-    copyFile: async (src: string, dest: string) => {
-      if (copyFileShouldThrow) throw copyFileShouldThrow;
-      copyFileCalls.push([src, dest]);
-    },
-  },
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  return {
+    ...actual,
+    existsSync: (_path: string) => fsState.existsValue,
+  };
 });
 
-let commandExecuteBeforeHook: (
-  ctx: any,
-) => (input: any, output: any) => Promise<void>;
+vi.mock("node:fs/promises", () => ({
+  default: { copyFile },
+  copyFile,
+}));
 
-before(async () => {
-  const mod = await import("../modules/cavekit/hooks/command.js");
+let commandExecuteBeforeHook: (ctx: any) => (input: any, output: any) => Promise<void>;
+
+beforeAll(async () => {
+  const mod = await import("./command.js");
   commandExecuteBeforeHook = mod.commandExecuteBeforeHook;
 });
 
@@ -60,8 +59,8 @@ function makeExistingParts() {
 
 describe("V18: ck:init copy/overwrite label", () => {
   it("not existed → includes 'copied' text", async () => {
-    existsValue = false;
-    copyFileShouldThrow = null;
+    fsState.existsValue = false;
+    fsState.copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
     const handler = commandExecuteBeforeHook(CTX as any);
@@ -77,8 +76,8 @@ describe("V18: ck:init copy/overwrite label", () => {
   });
 
   it("existed → includes 'overwritten' text", async () => {
-    existsValue = true;
-    copyFileShouldThrow = null;
+    fsState.existsValue = true;
+    fsState.copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
     const handler = commandExecuteBeforeHook(CTX as any);
@@ -92,8 +91,8 @@ describe("V18: ck:init copy/overwrite label", () => {
 
 describe("V25: ck:init empty-parts fallback", () => {
   it("empty parts → pushes new part", async () => {
-    existsValue = false;
-    copyFileShouldThrow = null;
+    fsState.existsValue = false;
+    fsState.copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
     const handler = commandExecuteBeforeHook(CTX as any);
@@ -106,8 +105,8 @@ describe("V25: ck:init empty-parts fallback", () => {
   });
 
   it("empty parts push includes FORMAT.md reference", async () => {
-    existsValue = false;
-    copyFileShouldThrow = null;
+    fsState.existsValue = false;
+    fsState.copyFileShouldThrow = null;
 
     const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
@@ -120,8 +119,8 @@ describe("V25: ck:init empty-parts fallback", () => {
 
 describe("V26: ck:init copyFile error → error part", () => {
   it("copyFile throws → pushes error part, no throw", async () => {
-    existsValue = false;
-    copyFileShouldThrow = new Error("EACCES: permission denied");
+    fsState.existsValue = false;
+    fsState.copyFileShouldThrow = new Error("EACCES: permission denied");
 
     const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
@@ -145,8 +144,8 @@ describe("V26: ck:init copyFile error → error part", () => {
   });
 
   it("error part includes destination path", async () => {
-    existsValue = false;
-    copyFileShouldThrow = new Error("EACCES: permission denied");
+    fsState.existsValue = false;
+    fsState.copyFileShouldThrow = new Error("EACCES: permission denied");
 
     const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };
@@ -166,8 +165,8 @@ describe("misc: ck:init non-command passthrough", () => {
   });
 
   it("copyFile called with FORMAT.md paths", async () => {
-    existsValue = false;
-    copyFileShouldThrow = null;
+    fsState.existsValue = false;
+    fsState.copyFileShouldThrow = null;
     copyFileCalls.length = 0;
 
     const handler = commandExecuteBeforeHook(CTX as any);

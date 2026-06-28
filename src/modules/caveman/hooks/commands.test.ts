@@ -1,33 +1,82 @@
-import { describe, it, before, mock } from "node:test";
+import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
+import { parseCavemanArg } from "./commands.js";
 
-// V30: parts.length > 0 → splice ignored stats + synthetic blocker (2 parts total). ⊥ model runs.
-// V31: splice ! reuse output.parts[0].id for stats; output.parts[0].messageID for both. ⊥ fresh messageId().
+// V24: /caveman mode switch ! backed by command.execute.before handler.
+// V30: parts.length > 0 → splice ignored stats + synthetic blocker.
+// V31: splice ! reuse output.parts[0].id for stats; output.parts[0].messageID for both.
 // V32: parts.length === 0 → push exactly 1 part; ignored ⊥ set, synthetic ⊥ set.
 
-mock.module("../modules/caveman/lib/tokens.js", {
-  namedExports: {
-    getSessionTokens: async () => null,
-  },
-});
+vi.mock("../lib/tokens.js", () => ({
+  getSessionTokens: vi.fn(async () => null),
+}));
 
-mock.module("node:fs", {
-  namedExports: {
-    existsSync: () => false,
-    mkdirSync: () => {},
-    readFileSync: () => "",
-    writeFileSync: () => {},
-    unlinkSync: () => {},
-    appendFileSync: () => {},
-  },
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
+  return {
+    ...actual,
+    existsSync: vi.fn(() => false),
+    mkdirSync: vi.fn(),
+    readFileSync: vi.fn(() => ""),
+    writeFileSync: vi.fn(),
+    unlinkSync: vi.fn(),
+    appendFileSync: vi.fn(),
+  };
 });
 
 let commandExecuteBeforeHook: (ctx: any) => (input: any, output: any) => Promise<void>;
 
-before(async () => {
-  const mod = await import("../modules/caveman/hooks/commands.js");
+beforeAll(async () => {
+  const mod = await import("./commands.js");
   commandExecuteBeforeHook = mod.commandExecuteBeforeHook;
 });
+
+// ─── V24: parseCavemanArg ─────────────────────────────────────────────────────
+
+describe("V24: parseCavemanArg — /caveman command.execute.before mode dispatch", () => {
+  it("no args → full (default)", () => {
+    assert.strictEqual(parseCavemanArg(undefined), "full");
+    assert.strictEqual(parseCavemanArg(""), "full");
+    assert.strictEqual(parseCavemanArg("  "), "full");
+  });
+
+  it("explicit full → full (via isValidMode, not special case)", () => {
+    assert.strictEqual(parseCavemanArg("full"), "full");
+    assert.strictEqual(parseCavemanArg("FULL"), "full");
+  });
+
+  it("lite → lite", () => {
+    assert.strictEqual(parseCavemanArg("lite"), "lite");
+  });
+
+  it("ultra → ultra", () => {
+    assert.strictEqual(parseCavemanArg("ultra"), "ultra");
+  });
+
+  it("wenyan variants → pass through", () => {
+    assert.strictEqual(parseCavemanArg("wenyan-lite"), "wenyan-lite");
+    assert.strictEqual(parseCavemanArg("wenyan-full"), "wenyan-full");
+    assert.strictEqual(parseCavemanArg("wenyan-ultra"), "wenyan-ultra");
+  });
+
+  it("off → off (triggers removeModeFlag)", () => {
+    assert.strictEqual(parseCavemanArg("off"), "off");
+    assert.strictEqual(parseCavemanArg("OFF"), "off");
+  });
+
+  it("invalid arg → null (no-op, no flag write)", () => {
+    assert.strictEqual(parseCavemanArg("bogus"), null);
+    assert.strictEqual(parseCavemanArg("on"), null);
+    assert.strictEqual(parseCavemanArg("medium"), null);
+  });
+
+  it("trims whitespace before matching", () => {
+    assert.strictEqual(parseCavemanArg("  lite  "), "lite");
+    assert.strictEqual(parseCavemanArg(" off "), "off");
+  });
+});
+
+// ─── V30/V31/V32: caveman-stats hook splice ───────────────────────────────────
 
 const SID = "ses_stats_hook_test";
 const CTX = { directory: "/tmp/caveman-test", client: {} };

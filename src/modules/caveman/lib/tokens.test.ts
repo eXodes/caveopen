@@ -1,6 +1,6 @@
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import assert from "node:assert/strict";
-import { getSessionTokens } from "../modules/caveman/lib/tokens.js";
+import { getSessionTokens } from "./tokens.js";
 
 // V12: getSessionTokens sum assistant msgs only. output==0 → null.
 

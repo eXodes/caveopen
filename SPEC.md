@@ -9,7 +9,7 @@ Port caveman + cavekit v4 + cavemem → OpenCode native plugin (skills/commands/
 - `cavemem` optional peer dep (>=1.0.0). absent → skip graceful. integration CLI-only: spawn `cavemem hook run <name>`, stdin JSON / stdout JSON. ⊥ `@cavemem/*` import.
 - module isolation: caveman | cavekit | cavemem each self-contained.
 - build: `tsc && copyfiles -u 1 "src/**/*.md" dist`. skills/commands/agents/FORMAT.md → dist/.
-- test: node runner, `--experimental-test-module-mocks`, glob `dist/test/**/*.test.js`.
+- test: vitest. tests run src/ direct (⊥ dist/). tsconfig ! exclude src/test.
 - mode/state files ∈ `~/.caveman/` (⊥ repo).
 
 ## §I INTERFACES
@@ -82,9 +82,24 @@ V29: cli plugin entry ! use `@latest` tag (`"caveopen@latest"` | `["caveopen@lat
 V30: `/caveman-stats` `command.execute.before` ! splice `ignored:true` stats part + `synthetic:true` blocker when `output.parts.length > 0` (per `/ck:init` pattern). ⊥ model runs after hook. `assets/commands/caveman-stats.md` body ! ⊥ instruct model read/compute stats (⊥ stale schema, ⊥ aggregation). Description ! reflect §I.cmd: session stats default, +lifetime via `--all`/`--since`.
 V31: `commandExecuteBeforeHook` caveman-stats splice (parts.length > 0) ! reuse `output.parts[0].id` for stats part; `output.parts[0].messageID` for both stats (ignored:true) + synthetic blocker parts. ⊥ fresh `messageId()` for either. [cavekit/hooks/command.ts:51-55]
 V32: caveman-stats empty-parts fallback ! produce exactly 1 part; `ignored` ⊥ set, `synthetic` ⊥ set on pushed part. ⊥ `output.parts.length > 1`. [commands.ts:93-100]
+V33: src/test/ mirrors src/: test/<path>.test.ts ↔ <path>.ts. ⊥ flat src/test/*.
+V34: runner = vitest (⊥ node --experimental-test-module-mocks). tests read src/ (⊥ dist/).
+V35: mocking ! vi.mock/vi.fn/vi.spyOn. ⊥ node:test mock.module.
+V36: vitest.config.ts ! configure `.js`-ext alias (`(.+)\.js` → `$1`) so `import("…/foo.js")` resolves src/…/foo.ts. ⊥ omit — NodeNext tsconfig ⊥ auto-handled by Vite default. [T29]
+V37: T31 move ! update all `vi.mock(path)` relative paths to resolve from new file location (⊥ old `src/test/` root). Affected: cavemem-session, cavemem-tool, cavemem-session-created, cavemem-eager-init, caveman-stats-hook, cavekit-command. [T31,T32]
+V38: T31 merge map (19 flat → mirrored):
+  cavemem-session + cavemem-session-created + cavemem-eager-init → modules/cavemem/hooks/session-init.test.ts
+  commands + caveman-stats-hook → modules/caveman/hooks/commands.test.ts
+  caveman-stats → modules/caveman/lib/stats.test.ts · caveman-history → modules/caveman/lib/history.test.ts
+  caveman-activation → modules/caveman/hooks/activation.test.ts · caveman-message → modules/caveman/hooks/message.test.ts
+  caveman-config → modules/caveman/lib/config.test.ts · caveman-tokens → modules/caveman/lib/tokens.test.ts
+  cavemem-runner → modules/cavemem/lib/runner.test.ts · cavemem-tool → modules/cavemem/hooks/tool.test.ts
+  cavemem-context → modules/cavemem/lib/context.test.ts · cavekit-command → modules/cavekit/hooks/command.test.ts
+  cli → cli.test.ts · cuid → lib/cuid.test.ts · merge-hooks → lib/merge-hooks.test.ts · system-transform → hooks/system-transform.test.ts
+  [T31,V33]
 
 ## §T TASKS
-Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
+∀ tasks T1–T28 done. T29–T33 = test restructure + framework migration.
 
 id|status|task|cites
 T1|x|test mergeHooks fan-in sequential|V2
@@ -115,6 +130,11 @@ T25|x|fix cli.ts:280: entry `"caveopen"` → `"caveopen@latest"` + fix dedup (li
 T26|x|fix `commandExecuteBeforeHook` caveman-stats path: splice `ignored:true` stats + `synthetic:true` blocker. Add `parts.length === 0` fallback (per V25 precedent).|V30
 T27|x|fix `assets/commands/caveman-stats.md`: replace compute/schema body → hook-passthrough notice. Align description to §I.cmd.|V30
 T28|x|test V30/V31/V32: caveman-stats splice ignored+blocker when parts.length>0; empty-parts push fallback|V30,V31,V32
+T29|x|install vitest devDep; vitest.config.ts w/ V36 `.js`-alias; test script → `vitest run`|V34,V36
+T30|x|exclude src/test from tsconfig.json; prod build ⊥ compile tests|V34
+T31|x|move src/test/*.test.ts → mirrored paths per V38; merge same-source per V38; update vi.mock relative paths per V37|V33,V37,V38
+T32|x|port mocks: mock.module → vi.mock/vi.fn/vi.spyOn; node:test imports → vitest; before→beforeAll, after→afterAll|V35,V37
+T33|x|verify: vitest run green; tsc ⊥ include src/test|V33,V34,V35
 
 ## §B BUGS
 id|date|cause|fix

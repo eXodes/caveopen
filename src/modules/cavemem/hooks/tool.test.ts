@@ -1,29 +1,27 @@
-import { describe, it, before, mock } from "node:test";
+import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 
 // V28: toolExecuteAfterHook ! use output.output || output.title (⊥ ??).
 // Task/agent tools return output.output="" → ?? passes "" through; || falls back to title.
 
-const hookCalls: Array<{ name: string; payload: Record<string, unknown> }> = [];
-
-mock.module("../modules/cavemem/lib/runner.js", {
-  namedExports: {
-    runCavememHook: async (name: string, payload: Record<string, unknown>) => {
-      hookCalls.push({ name, payload });
-      return null;
-    },
-  },
+const { hookCalls, runCavememHook } = vi.hoisted(() => {
+  const hookCalls: Array<{ name: string; payload: Record<string, unknown> }> = [];
+  const runCavememHook = vi.fn(async (name: string, payload: Record<string, unknown>) => {
+    hookCalls.push({ name, payload });
+    return null;
+  });
+  return { hookCalls, runCavememHook };
 });
 
-mock.module("../modules/cavemem/lib/context.js", {
-  namedExports: {
-    hasSession: () => true,
-    getCachedContext: () => undefined,
-    setCachedContext: () => {},
-    deleteCachedContext: () => {},
-    getCavememSystemPriorContext: () => null,
-  },
-});
+vi.mock("../lib/runner.js", () => ({ runCavememHook }));
+
+vi.mock("../lib/context.js", () => ({
+  hasSession: vi.fn(() => true),
+  getCachedContext: vi.fn(() => undefined),
+  setCachedContext: vi.fn(),
+  deleteCachedContext: vi.fn(),
+  getCavememSystemPriorContext: vi.fn(() => null),
+}));
 
 let toolExecuteAfterHook: (ctx: any) => (input: any, output: any) => Promise<void>;
 
@@ -34,8 +32,8 @@ const ctx = {
 
 const input = { sessionID: "ses_v28", tool: "test_tool", args: {} };
 
-before(async () => {
-  const mod = await import("../modules/cavemem/hooks/tool.js");
+beforeAll(async () => {
+  const mod = await import("./tool.js");
   toolExecuteAfterHook = mod.toolExecuteAfterHook;
 });
 
