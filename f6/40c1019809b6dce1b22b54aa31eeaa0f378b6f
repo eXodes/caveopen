@@ -1,0 +1,16 @@
+assets/commands/caveman-stats.md
+  h_88d401a01dbd20 4
+assets/commands/caveman.md
+  h_88d401a01dbd20 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.3",
+  "base_commit_sha": "f640c1019809b6dce1b22b54aa31eeaa0f378b6f",
+  "prompts": {},
+  "humans": {
+    "h_88d401a01dbd20": {
+      "author": "Exo Des <9076458+eXodes@users.noreply.github.com>"
+    }
+  }
+}
