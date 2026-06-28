@@ -191,7 +191,7 @@ Pure write path. `additionalContext` is always empty — retrieval is MCP-driven
     session_id: sessionID,
     tool_name: input.tool,
     tool_input: input.args,                         // available in-process; no .before capture needed
-    tool_response: output.output ?? output.title,   // title fallback for tools with no text output
+    tool_response: output.output || output.title,    // || not ??: empty string falls through to title
   })
 }
 ```

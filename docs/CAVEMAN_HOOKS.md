@@ -163,15 +163,47 @@ Hook 1b is not about system prompt injection; it is flag lifecycle management. T
     parts.push(formatHistory(agg));
   }
 
-  output.parts.push({
-    id: partId(),
-    sessionID: input.sessionID,
-    messageID: messageId(),
-    type: "text",
-    text: parts.filter(Boolean).join("\n\n"),
-  });
+  const statsText = parts.filter(Boolean).join("\n\n");
+
+  if (output.parts.length > 0) {
+    // OpenCode pre-populates output.parts with a placeholder before the hook fires.
+    // Splice replaces it in-place: first slot carries the stats text (marked ignored
+    // so OpenCode doesn't display it as a model turn), second slot is a synthetic
+    // blocker that prevents the model from generating a follow-up response.
+    output.parts.splice(
+      0,
+      output.parts.length,
+      {
+        id: output.parts[0].id,       // reuse original id — new id would orphan the slot
+        messageID: output.parts[0].messageID,
+        sessionID: input.sessionID,
+        type: "text",
+        text: statsText,
+        ignored: true,
+      },
+      {
+        id: partId(),
+        messageID: output.parts[0].messageID,
+        sessionID: input.sessionID,
+        type: "text",
+        text: "Stats displayed. No further action needed.",
+        synthetic: true,
+      },
+    );
+  } else {
+    // Headless / test path: no placeholder parts. Push a single stats part.
+    output.parts.push({
+      id: partId(),
+      sessionID: input.sessionID,
+      messageID: messageId(),
+      type: "text",
+      text: statsText,
+    });
+  }
 },
 ```
+
+**`/caveman-stats` part strategy:** OpenCode injects a placeholder part before `command.execute.before` fires. The hook must splice into that existing slot rather than push a new one — pushing would create a second part, causing OpenCode to treat the stats as two separate messages. Reusing `output.parts[0].id` and `messageID` keeps the slot identity intact. The `ignored` flag hides the stats text from the model; the `synthetic` flag on the blocker part prevents OpenCode from invoking the model at all, so the stats display without triggering a response.
 
 **`parseCavemanArg(args)`:** pure function — empty/undefined → `"full"`, `"off"` → `"off"`, valid mode (via `isValidMode`) → that mode, invalid → `null` (no-op). Single source of truth: mode list lives in `VALID_MODES` set in `config.ts`, not duplicated in a regex.
 
