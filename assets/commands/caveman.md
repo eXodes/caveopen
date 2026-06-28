@@ -2,6 +2,7 @@
 description: Activate caveman compression mode (lite | full | ultra | wenyan-lite | wenyan-full | wenyan-ultra | off)
 argument-hint: "[lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra|off]"
 ---
+
 Activate caveman mode: $ARGUMENTS
 
 If no level given, use full. If "off", deactivate.
