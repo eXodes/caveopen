@@ -81,6 +81,7 @@ V28: `toolExecuteAfterHook` ! use `output.output || output.title` (⊥ `??`). Ta
 V29: cli plugin entry ! use `@latest` tag (`"caveopen@latest"` | `["caveopen@latest",{…}]`). bare `"caveopen"` → npm ⊥ re-resolve latest. dedup ! match `==="caveopen"` | `startsWith("caveopen@")` prefix (⊥ exact str only). [B3]
 V30: `/caveman-stats` `command.execute.before` ! splice `ignored:true` stats part + `synthetic:true` blocker when `output.parts.length > 0` (per `/ck:init` pattern). ⊥ model runs after hook. `assets/commands/caveman-stats.md` body ! ⊥ instruct model read/compute stats (⊥ stale schema, ⊥ aggregation). Description ! reflect §I.cmd: session stats default, +lifetime via `--all`/`--since`.
 V31: `commandExecuteBeforeHook` caveman-stats splice (parts.length > 0) ! reuse `output.parts[0].id` for stats part; `output.parts[0].messageID` for both stats (ignored:true) + synthetic blocker parts. ⊥ fresh `messageId()` for either. [cavekit/hooks/command.ts:51-55]
+V32: caveman-stats empty-parts fallback ! produce exactly 1 part; `ignored` ⊥ set, `synthetic` ⊥ set on pushed part. ⊥ `output.parts.length > 1`. [commands.ts:93-100]
 
 ## §T TASKS
 Only cli.ts tested. ∀ other module untested → tasks = §V coverage.
@@ -113,7 +114,7 @@ T24|x|fix tool.ts:31 `output.output ?? output.title` → `output.output \|\| out
 T25|x|fix cli.ts:280: entry `"caveopen"` → `"caveopen@latest"` + fix dedup (lines 264–270) to match `startsWith("caveopen@")` \| `==="caveopen"`|V29
 T26|x|fix `commandExecuteBeforeHook` caveman-stats path: splice `ignored:true` stats + `synthetic:true` blocker. Add `parts.length === 0` fallback (per V25 precedent).|V30
 T27|x|fix `assets/commands/caveman-stats.md`: replace compute/schema body → hook-passthrough notice. Align description to §I.cmd.|V30
-T28|.|test V30: caveman-stats splice ignored+blocker when parts.length>0; empty-parts push fallback|V30,V31
+T28|x|test V30/V31/V32: caveman-stats splice ignored+blocker when parts.length>0; empty-parts push fallback|V30,V31,V32
 
 ## §B BUGS
 id|date|cause|fix
