@@ -4,7 +4,7 @@ import { writeFileSync, mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-// V10: readModeFlag → null when file absent | mode ∉ valid set.
+// readModeFlag returns null when file absent or mode not in valid set.
 
 const { state } = vi.hoisted(() => ({ state: { tmpDir: "" } }));
 
@@ -26,7 +26,7 @@ afterAll(() => {
   if (state.tmpDir) rmSync(state.tmpDir, { recursive: true, force: true });
 });
 
-describe("V10: isValidMode", () => {
+describe("isValidMode", () => {
   it("valid modes return true", () => {
     for (const m of [
       "lite",
@@ -47,7 +47,7 @@ describe("V10: isValidMode", () => {
   });
 });
 
-describe("V10: readModeFlag", () => {
+describe("readModeFlag", () => {
   it("file absent → null", () => {
     try {
       config.removeModeFlag();

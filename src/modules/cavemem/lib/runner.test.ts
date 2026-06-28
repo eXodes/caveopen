@@ -2,9 +2,9 @@ import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 
-// V9: runCavememHook: spawn err | empty stdout | bad JSON → null.
-// V4: cavemem bin absent → ⊥ throw.
-// V22: stdin error guard — ⊥ unhandled EPIPE.
+// runCavememHook: spawn error, empty stdout, or bad JSON all return null.
+// cavemem binary absent → returns null without throwing.
+// stdin error guard — EPIPE must not bubble as unhandled.
 
 type SpawnBehavior =
   | { type: "spawn-error"; err: Error }
@@ -53,7 +53,7 @@ beforeAll(async () => {
   runCavememHook = mod.runCavememHook;
 });
 
-describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
+describe("runCavememHook spawn/empty/parse fallbacks", () => {
   it("spawn error → null", async () => {
     spawnState.behavior = {
       type: "spawn-error",
@@ -127,8 +127,8 @@ describe("V9: runCavememHook spawn/empty/parse fallbacks", () => {
   });
 });
 
-describe("V4/V22: cavemem absence + stdin-error guard", () => {
-  it("V4: ENOENT → null, no throw", async () => {
+describe("cavemem absence + stdin-error guard", () => {
+  it("ENOENT → null, no throw", async () => {
     spawnState.behavior = {
       type: "spawn-error",
       err: Object.assign(new Error("ENOENT"), { code: "ENOENT" }),
@@ -144,7 +144,7 @@ describe("V4/V22: cavemem absence + stdin-error guard", () => {
     assert.strictEqual(result, null);
   });
 
-  it("V22: stdin EPIPE → null, no unhandled throw", async () => {
+  it("stdin EPIPE → null, no unhandled throw", async () => {
     spawnState.behavior = {
       type: "stdin-error",
       stdout: "",

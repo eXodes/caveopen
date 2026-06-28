@@ -1,9 +1,9 @@
 import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 
-// V18: ck:init: existed → "overwritten"; else → "copied". ∀ case → copy file.
-// V25: empty parts → push new part with copy result text.
-// V26: copyFile failure → push error part w/ path & msg.
+// FORMAT.md copy behavior: existed → "overwritten"; else → "copied". All cases → copy file.
+// empty parts → push new part with copy result text.
+// copyFile failure → push error part with path and message.
 
 const { fsState, copyFileCalls, copyFile } = vi.hoisted(() => {
   const fsState = {
@@ -57,7 +57,7 @@ function makeExistingParts() {
   ];
 }
 
-describe("V18: ck:init copy/overwrite label", () => {
+describe("ck:init copy/overwrite label", () => {
   it("not existed → includes 'copied' text", async () => {
     fsState.existsValue = false;
     fsState.copyFileShouldThrow = null;
@@ -89,7 +89,7 @@ describe("V18: ck:init copy/overwrite label", () => {
   });
 });
 
-describe("V25: ck:init empty-parts fallback", () => {
+describe("ck:init empty-parts fallback", () => {
   it("empty parts → pushes new part", async () => {
     fsState.existsValue = false;
     fsState.copyFileShouldThrow = null;
@@ -117,7 +117,7 @@ describe("V25: ck:init empty-parts fallback", () => {
   });
 });
 
-describe("V26: ck:init copyFile error → error part", () => {
+describe("ck:init copyFile error → error part", () => {
   it("copyFile throws → pushes error part, no throw", async () => {
     fsState.existsValue = false;
     fsState.copyFileShouldThrow = new Error("EACCES: permission denied");

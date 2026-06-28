@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { combinedSystemTransform } from "./system-transform.js";
 import { mergeHooks } from "../lib/merge-hooks.js";
 
-// V1: combined path → 1 output.system.push() (single slot).
-// V6: push iff ≥1 non-null provider.
-// V21: caveopen.ts overwrites merged transform key — ⊥ double-push.
+// combined path → single output.system.push() (one system slot).
+// push only when at least one provider returns non-null.
+// caveopen.ts overwrites merged transform key to prevent double-push.
 
-describe("V1/V6: combinedSystemTransform single-slot + skip-empty", () => {
+describe("combinedSystemTransform single-slot + skip-empty", () => {
   it("single provider → one push", async () => {
     const transform = combinedSystemTransform([() => "ruleset"]);
     const system: string[] = [];
@@ -24,7 +24,7 @@ describe("V1/V6: combinedSystemTransform single-slot + skip-empty", () => {
     assert.strictEqual(system[0], "a\n\nb");
   });
 
-  it("all null providers → no push (V6)", async () => {
+  it("all null providers → no push", async () => {
     const transform = combinedSystemTransform([() => null, () => null]);
     const system: string[] = [];
     await transform({ sessionID: "ses_test" } as any, { system } as any);
@@ -43,7 +43,7 @@ describe("V1/V6: combinedSystemTransform single-slot + skip-empty", () => {
     assert.strictEqual(system[0], "content");
   });
 
-  it("empty providers array → no push (V6)", async () => {
+  it("empty providers array → no push", async () => {
     const transform = combinedSystemTransform([]);
     const system: string[] = [];
     await transform({ sessionID: "ses_test" } as any, { system } as any);
@@ -63,7 +63,7 @@ describe("V1/V6: combinedSystemTransform single-slot + skip-empty", () => {
   });
 });
 
-describe("V21: combinedSystemTransform overwrites merged transform — ⊥ double-push", () => {
+describe("combinedSystemTransform overwrites merged transform — ⊥ double-push", () => {
   it("mergeHooks alone double-pushes; overwrite prevents it", async () => {
     const merged = mergeHooks(
       {

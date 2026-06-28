@@ -5,9 +5,9 @@ import {
   formatStats,
 } from "./stats.js";
 
-// V20: derivesSavings: mode null → {0,0}. else savedTok=round(out*ratio), savedUsd=cost*ratio.
+// derivesSavings: mode null → {0,0}; else savedTok=round(out*ratio), savedUsd=cost*ratio.
 
-describe("V20: derivesSavings", () => {
+describe("derivesSavings", () => {
   it("mode null → {0, 0}", () => {
     const r = derivesSavings({ outputTokens: 1000, actualCost: 0.01, mode: null });
     assert.strictEqual(r.estSavedTokens, 0);
@@ -56,7 +56,7 @@ describe("V20: derivesSavings", () => {
   });
 });
 
-describe("V20: formatStats", () => {
+describe("formatStats", () => {
   it("includes session id prefix", () => {
     const text = formatStats({
       tokens: undefined,

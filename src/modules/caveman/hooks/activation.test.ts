@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-// V11: caveman session.created: defaultMode full → writeModeFlag(full) iff flag unset.
+// caveman session.created: defaultMode full → writeModeFlag(full) only if flag unset.
 // NOTE: defaultMode hardcoded 'full'; 'off' branch unreachable until config wired [config.ts:76-77].
 
 const { state } = vi.hoisted(() => ({ state: { tmpDir: "" } }));
@@ -40,7 +40,7 @@ function makeSesCreatedEvent(id: string | undefined) {
   };
 }
 
-describe("V11: caveman session.created activation", () => {
+describe("caveman session.created activation", () => {
   it("flag unset + defaultMode full → writeModeFlag(full)", async () => {
     cfg.removeModeFlag();
     await activation.handleSessionCreated(

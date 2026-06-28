@@ -1,9 +1,9 @@
 import { describe, it, beforeAll, afterAll, vi } from "vitest";
 import assert from "node:assert/strict";
 
-// V8: initSession: hasSession → no-op resolve. concurrent caller → share pending promise.
-// V27: handleSessionCreated fallback ! use ctx.directory (⊥ process.cwd()).
-// V27: cavemem eager-init (tool hook) fallback ! use ctx.directory (⊥ process.cwd()).
+// initSession: already-initialized session → no-op. Concurrent callers share pending promise.
+// handleSessionCreated fallback must use ctx.directory, not process.cwd().
+// cavemem eager-init (tool hook) fallback must use ctx.directory, not process.cwd().
 
 const { runnerState, runCavememHook } = vi.hoisted(() => {
   const hookCalls: Array<{ name: string; payload: object }> = [];
@@ -24,9 +24,9 @@ const { runnerState, runCavememHook } = vi.hoisted(() => {
 
 vi.mock("../lib/runner.js", () => ({ runCavememHook }));
 
-// ─── Section A: V8 initSession ────────────────────────────────────────────────
+// ─── Section A: initSession ───────────────────────────────────────────────────
 
-describe("V8: initSession pending dedup + hasSession no-op", () => {
+describe("initSession pending dedup + hasSession no-op", () => {
   let initSession: (sessionID: string, directory: string) => Promise<void>;
   let hasSession: (sessionID: string) => boolean;
   let getCachedContext: (sessionID: string) => string | undefined;
@@ -77,9 +77,9 @@ describe("V8: initSession pending dedup + hasSession no-op", () => {
   });
 });
 
-// ─── Section B: V27 handleSessionCreated ─────────────────────────────────────
+// ─── Section B: handleSessionCreated ─────────────────────────────────────────
 
-describe("V27: handleSessionCreated uses ctx.directory when event.dir absent", () => {
+describe("handleSessionCreated uses ctx.directory when event.dir absent", () => {
   let handleSessionCreated: (event: any, ctx: any) => Promise<void>;
 
   beforeAll(async () => {
@@ -107,7 +107,7 @@ describe("V27: handleSessionCreated uses ctx.directory when event.dir absent", (
     assert.strictEqual((call.payload as any).cwd, "/event/dir");
   });
 
-  it("V27: event.directory absent → ctx.directory (not process.cwd())", async () => {
+  it("event.directory absent → ctx.directory (not process.cwd())", async () => {
     runnerState.hookCalls.length = 0;
     const ctx = { directory: "/ctx/session/root" };
     await handleSessionCreated(makeEvent("ses_t22_b", undefined), ctx);
@@ -138,9 +138,9 @@ describe("V27: handleSessionCreated uses ctx.directory when event.dir absent", (
   });
 });
 
-// ─── Section C: V27 tool eager-init (isolated modules) ───────────────────────
+// ─── Section C: tool eager-init (isolated modules) ───────────────────────────
 
-describe("V27: tool eager-init uses ctx.directory ⊥ process.cwd()", () => {
+describe("tool eager-init uses ctx.directory ⊥ process.cwd()", () => {
   const initCalls: Array<{ sessionID: string; directory: string }> = [];
   let toolExecuteAfterHook: (ctx: any) => (input: any, output: any) => Promise<void>;
 
@@ -182,7 +182,7 @@ describe("V27: tool eager-init uses ctx.directory ⊥ process.cwd()", () => {
     assert.strictEqual(call.directory, "/resp/dir");
   });
 
-  it("V27: resp.data.directory absent → ctx.directory (not process.cwd())", async () => {
+  it("resp.data.directory absent → ctx.directory (not process.cwd())", async () => {
     initCalls.length = 0;
     const { ctx, input, output } = makeTool("ses_t27_2", undefined, "/ctx/fallback/dir");
     await toolExecuteAfterHook(ctx)(input, output);

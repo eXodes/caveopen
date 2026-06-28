@@ -2,9 +2,9 @@ import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import { cuid, partId, sessionId, messageId } from "./cuid.js";
 
-// V19: cuid → first char letter, [a-z0-9], default len 24. id prefixes prt_ ses_ msg_.
+// cuid: first char is letter, all chars [a-z0-9], default length 24. Prefixes: prt_ ses_ msg_.
 
-describe("V19: cuid format + prefixes", () => {
+describe("cuid format + prefixes", () => {
   it("default length 24", () => {
     assert.strictEqual(cuid().length, 24);
   });

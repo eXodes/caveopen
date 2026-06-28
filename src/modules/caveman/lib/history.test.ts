@@ -9,7 +9,7 @@ import {
   type HistoryEntry,
 } from "./history.js";
 
-// T10: parseHistory + aggregateHistory skip-malformed, filter, aggregate.
+// parseHistory and aggregateHistory skip malformed entries, filter by date, and aggregate.
 
 let tmpDir: string;
 let histPath: string;
@@ -42,7 +42,7 @@ function entry(
   });
 }
 
-describe("T10: parseHistory + aggregateHistory", () => {
+describe("parseHistory + aggregateHistory", () => {
   it("file absent → []", () => {
     assert.deepStrictEqual(parseHistory("/nonexistent/path.jsonl"), []);
   });

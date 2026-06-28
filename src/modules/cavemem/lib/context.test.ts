@@ -6,11 +6,11 @@ import {
   deleteCachedContext,
 } from "./context.js";
 
-// V7: getCavememSystemPriorContext → null when skipPriorContext | ⊥ sessionID | empty ctx.
+// getCavememSystemPriorContext returns null when skipPriorContext is set, no sessionID, or empty context.
 
 const SID = "test-session-v7";
 
-describe("V7: getCavememSystemPriorContext null paths", () => {
+describe("getCavememSystemPriorContext null paths", () => {
   beforeEach(() => {
     deleteCachedContext(SID);
   });

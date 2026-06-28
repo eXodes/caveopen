@@ -2,7 +2,7 @@ import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import { getSessionTokens } from "./tokens.js";
 
-// V12: getSessionTokens sum assistant msgs only. output==0 → null.
+// getSessionTokens sums assistant messages only; returns null when output is 0.
 
 function makeMsg(
   role: string,
@@ -31,7 +31,7 @@ function makeClient(msgs: ReturnType<typeof makeMsg>[]) {
   } as any;
 }
 
-describe("V12: getSessionTokens assistant-only + null", () => {
+describe("getSessionTokens assistant-only + null", () => {
   it("sums only assistant messages", async () => {
     const client = makeClient([
       makeMsg("assistant", 100, 50, 0.001),

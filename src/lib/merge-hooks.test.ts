@@ -2,9 +2,9 @@ import { describe, it } from "vitest";
 import assert from "node:assert/strict";
 import { mergeHooks } from "./merge-hooks.js";
 
-// V2: mergeHooks merges ALL same-key handlers → array, run sequential.
+// mergeHooks merges all same-key handlers into an array, running them sequentially.
 
-describe("V2: mergeHooks fan-in sequential", () => {
+describe("mergeHooks fan-in sequential", () => {
   it("same-key handlers both run in order", async () => {
     const order: number[] = [];
     const merged = mergeHooks(

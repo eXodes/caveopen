@@ -2,10 +2,10 @@ import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 import { parseCavemanArg } from "./commands.js";
 
-// V24: /caveman mode switch ! backed by command.execute.before handler.
-// V30: parts.length > 0 → splice ignored stats + synthetic blocker.
-// V31: splice ! reuse output.parts[0].id for stats; output.parts[0].messageID for both.
-// V32: parts.length === 0 → push exactly 1 part; ignored ⊥ set, synthetic ⊥ set.
+// /caveman mode switch must be backed by command.execute.before handler.
+// parts.length > 0 → splice ignored stats + synthetic blocker.
+// splice must reuse output.parts[0].id for stats; output.parts[0].messageID for both.
+// parts.length === 0 → push exactly 1 part; ignored/synthetic must not be set.
 
 vi.mock("../lib/tokens.js", () => ({
   getSessionTokens: vi.fn(async () => null),
@@ -31,9 +31,9 @@ beforeAll(async () => {
   commandExecuteBeforeHook = mod.commandExecuteBeforeHook;
 });
 
-// ─── V24: parseCavemanArg ─────────────────────────────────────────────────────
+// ─── parseCavemanArg ──────────────────────────────────────────────────────────
 
-describe("V24: parseCavemanArg — /caveman command.execute.before mode dispatch", () => {
+describe("parseCavemanArg — /caveman command.execute.before mode dispatch", () => {
   it("no args → full (default)", () => {
     assert.strictEqual(parseCavemanArg(undefined), "full");
     assert.strictEqual(parseCavemanArg(""), "full");
@@ -76,7 +76,7 @@ describe("V24: parseCavemanArg — /caveman command.execute.before mode dispatch
   });
 });
 
-// ─── V30/V31/V32: caveman-stats hook splice ───────────────────────────────────
+// ─── caveman-stats hook splice ────────────────────────────────────────────────
 
 const SID = "ses_stats_hook_test";
 const CTX = { directory: "/tmp/caveman-test", client: {} };
@@ -97,7 +97,7 @@ function makeParts() {
   ];
 }
 
-describe("V30: parts.length > 0 → splice 2 parts: ignored stats + synthetic blocker", () => {
+describe("parts.length > 0 → splice 2 parts: ignored stats + synthetic blocker", () => {
   it("output has exactly 2 parts after splice", async () => {
     const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: makeParts() };
@@ -127,7 +127,7 @@ describe("V30: parts.length > 0 → splice 2 parts: ignored stats + synthetic bl
   });
 });
 
-describe("V31: splice reuses original id and messageID — ⊥ fresh messageId()", () => {
+describe("splice reuses original id and messageID — ⊥ fresh messageId()", () => {
   it("stats part reuses output.parts[0].id", async () => {
     const handler = commandExecuteBeforeHook(CTX as any);
     const parts = makeParts();
@@ -153,7 +153,7 @@ describe("V31: splice reuses original id and messageID — ⊥ fresh messageId()
   });
 });
 
-describe("V32: empty-parts fallback → exactly 1 part, no ignored/synthetic", () => {
+describe("empty-parts fallback → exactly 1 part, no ignored/synthetic", () => {
   it("pushes exactly 1 part", async () => {
     const handler = commandExecuteBeforeHook(CTX as any);
     const output = { parts: [] as any[] };

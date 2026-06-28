@@ -1,7 +1,7 @@
 import { describe, it, beforeAll, vi } from "vitest";
 import assert from "node:assert/strict";
 
-// V28: toolExecuteAfterHook ! use output.output || output.title (⊥ ??).
+// toolExecuteAfterHook must use output.output || output.title, not nullish coalescing.
 // Task/agent tools return output.output="" → ?? passes "" through; || falls back to title.
 
 const { hookCalls, runCavememHook } = vi.hoisted(() => {
@@ -37,7 +37,7 @@ beforeAll(async () => {
   toolExecuteAfterHook = mod.toolExecuteAfterHook;
 });
 
-describe("V28: tool_response uses || (⊥ ??)", () => {
+describe("tool_response uses || (⊥ ??)", () => {
   it("output.output='' → falls back to output.title", async () => {
     hookCalls.length = 0;
     const handler = toolExecuteAfterHook(ctx);

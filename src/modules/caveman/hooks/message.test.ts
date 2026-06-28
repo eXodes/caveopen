@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-// V10: caveman chat.message hook — activation/deactivation phrases.
+// caveman chat.message hook — activation/deactivation phrases.
 
 const { state } = vi.hoisted(() => ({ state: { tmpDir: "" } }));
 
@@ -34,7 +34,7 @@ function makeOutput(text: string) {
   return { parts: [{ type: "text" as const, text }] };
 }
 
-describe("V10: caveman message mode-switch + phrases", () => {
+describe("caveman message mode-switch + phrases", () => {
   it("'activate caveman' → writeModeFlag(default=full)", async () => {
     cfg.removeModeFlag();
     const handler = msgMod.chatMessageHook({} as any);
