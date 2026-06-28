@@ -112,7 +112,7 @@ T23|x|assess & fix cavekit/hooks/command.ts:14: process.cwd() → ctx.directory 
 T24|x|fix tool.ts:31 `output.output ?? output.title` → `output.output \|\| output.title` + test empty-string fallback|V28
 T25|x|fix cli.ts:280: entry `"caveopen"` → `"caveopen@latest"` + fix dedup (lines 264–270) to match `startsWith("caveopen@")` \| `==="caveopen"`|V29
 T26|x|fix `commandExecuteBeforeHook` caveman-stats path: splice `ignored:true` stats + `synthetic:true` blocker. Add `parts.length === 0` fallback (per V25 precedent).|V30
-T27|.|fix `assets/commands/caveman-stats.md`: replace compute/schema body → hook-passthrough notice. Align description to §I.cmd.|V30
+T27|x|fix `assets/commands/caveman-stats.md`: replace compute/schema body → hook-passthrough notice. Align description to §I.cmd.|V30
 T28|.|test V30: caveman-stats splice ignored+blocker when parts.length>0; empty-parts push fallback|V30,V31
 
 ## §B BUGS
