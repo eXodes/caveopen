@@ -66,12 +66,37 @@ export function commandExecuteBeforeHook(
       parts.push(formatHistory(agg));
     }
 
-    output.parts.push({
-      id: partId(),
-      sessionID: input.sessionID,
-      messageID: messageId(),
-      type: "text",
-      text: parts.filter(Boolean).join("\n\n"),
-    });
+    const statsText = parts.filter(Boolean).join("\n\n");
+
+    if (output.parts.length > 0) {
+      output.parts.splice(
+        0,
+        output.parts.length,
+        {
+          id: output.parts[0].id,
+          messageID: output.parts[0].messageID,
+          sessionID: input.sessionID,
+          type: "text",
+          text: statsText,
+          ignored: true,
+        },
+        {
+          id: partId(),
+          messageID: output.parts[0].messageID,
+          sessionID: input.sessionID,
+          type: "text",
+          text: "Stats displayed. No further action needed.",
+          synthetic: true,
+        },
+      );
+    } else {
+      output.parts.push({
+        id: partId(),
+        messageID: messageId(),
+        sessionID: input.sessionID,
+        type: "text",
+        text: statsText,
+      });
+    }
   };
 }
